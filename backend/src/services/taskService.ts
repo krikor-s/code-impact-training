@@ -1,3 +1,4 @@
+const unused_variable = 42;
 export function getTasks() {
   return [];
 }

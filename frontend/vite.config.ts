@@ -6,6 +6,9 @@ export default defineConfig({
   plugins: [tailwindcss(), react()],
   server: {
     host: true,
-    allowedHosts: ["frontend-development-f04a.up.railway.app"],
+    allowedHosts: [
+      "frontend-development-f04a.up.railway.app",
+      "frontend-stag-staging.up.railway.app",
+    ],
   },
 });

@@ -9,6 +9,7 @@ export default defineConfig({
     allowedHosts: [
       "frontend-development-f04a.up.railway.app",
       "frontend-stag-staging.up.railway.app",
+      "frontend-prod-production-3da1.up.railway.app",
     ],
   },
 });

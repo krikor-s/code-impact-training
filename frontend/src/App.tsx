@@ -1,5 +1,7 @@
 import { useState } from "react";
 import type { Task } from "./types";
+import SignupPage from "./pages/SignupPage";
+import LoginPage from "./pages/LoginPage";
 
 function TaskCard({ task }: { task: Task }) {
   return (
@@ -19,9 +21,13 @@ export default function App() {
     { id: "3", title: "Connect to the backend", completed: false },
   ]);
 
+  const path = window.location.pathname;
+  if (path === "/signup") return <SignupPage />;
+  if (path === "/login") return <LoginPage />;
+
   return (
     <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-8">
-      <h1 className="text-4xl font-bold text-gray-900 mb-8">Impact Training</h1>
+      <h1 className="text-4xl font-bold text-gray-900 mb-8">Code Impact Training</h1>
       <div className="w-full max-w-md">
         {tasks.map((task) => (
           <TaskCard key={task.id} task={task} />

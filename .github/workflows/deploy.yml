@@ -1,0 +1,73 @@
+name: ci / deploy
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch:
+    inputs:
+      environment:
+        description: "Target environment"
+        required: true
+        type: choice
+        options:
+          - development
+          - staging
+          - production
+
+jobs:
+  backend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: backend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: backend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+      - run: npm test
+
+  frontend:
+    runs-on: ubuntu-latest
+    defaults:
+      run:
+        working-directory: frontend
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "24"
+          cache: "npm"
+          cache-dependency-path: frontend/package-lock.json
+      - run: npm ci
+      - run: npm run lint
+      - run: npm run build
+
+  deploy:
+    if: github.event_name == 'workflow_dispatch'
+    needs: [backend, frontend]
+    runs-on: ubuntu-latest
+    environment: ${{ inputs.environment }}
+    env:
+      RAILWAY_PROJECT: 458173c9-77e8-43c2-9cf0-9931396f240c
+      BACKEND_SERVICE: ${{ inputs.environment == 'development' && 'backend-dev' || inputs.environment == 'staging' && 'backend-stag' || 'backend-prod' }}
+      FRONTEND_SERVICE: ${{ inputs.environment == 'development' && 'frontend-dev' || inputs.environment == 'staging' && 'frontend-stag' || 'frontend-prod' }}
+    steps:
+      - uses: actions/checkout@v5
+      - name: Install Railway CLI
+        run: npm install -g @railway/cli
+      - name: Deploy backend
+        run: railway up --service "$BACKEND_SERVICE" --environment "${{ inputs.environment }}" --project "$RAILWAY_PROJECT"
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}
+      - name: Deploy frontend
+        run: railway up --service "$FRONTEND_SERVICE" --environment "${{ inputs.environment }}" --project "$RAILWAY_PROJECT"
+        env:
+          RAILWAY_TOKEN: ${{ secrets.RAILWAY_TOKEN }}

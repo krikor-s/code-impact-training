@@ -22,5 +22,5 @@ RUN npm run build
 # Expose port 3000 so the container can be reached
 EXPOSE 3000
 
-# Start the compiled server
-CMD ["node", "dist/index.js"]
+# Apply pending migrations then start the compiled server
+CMD ["sh", "-c", "npx prisma migrate deploy && node dist/index.js"]

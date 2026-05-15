@@ -7,7 +7,8 @@ WORKDIR /app
 # Copy package files first (for better caching)
 COPY package*.json ./
 
-# Copy the Prisma schema so postinstall's `prisma generate` can find it
+# Copy Prisma config and schema so postinstall's `prisma generate` can find them
+COPY prisma.config.ts ./
 COPY prisma ./prisma
 
 # Install all dependencies

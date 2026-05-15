@@ -11,6 +11,12 @@ export default defineConfig({
   },
   server: {
     host: true,
+    proxy: {
+      "/api": {
+        target: "http://backend:3000",
+        changeOrigin: true,
+      },
+    },
     allowedHosts: [
       "frontend-development-f04a.up.railway.app",
       "frontend-stag-staging.up.railway.app",

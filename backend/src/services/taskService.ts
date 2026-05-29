@@ -18,7 +18,7 @@ export async function createTask(userId: string, title: string, dueDate?: Date) 
 export async function updateTask(
   id: string,
   userId: string,
-  fields: { title?: string; status?: Status; dueDate?: Date | null }
+  fields: { title?: string; description?: string | null; status?: Status; dueDate?: Date | null }
 ) {
   const task = await prisma.task.findFirst({ where: { id, userId } });
   if (!task) throw new Error("NOT_FOUND");

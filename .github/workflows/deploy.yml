@@ -54,7 +54,7 @@ jobs:
     if: github.event_name == 'workflow_dispatch'
     needs: [backend, frontend]
     runs-on: ubuntu-latest
-    environment: ${{ inputs.environment }}
+    environment: code-impact-training / ${{ inputs.environment }}
     env:
       RAILWAY_PROJECT: 458173c9-77e8-43c2-9cf0-9931396f240c
       BACKEND_SERVICE: ${{ inputs.environment == 'development' && 'backend-dev' || inputs.environment == 'staging' && 'backend-stag' || 'backend-prod' }}

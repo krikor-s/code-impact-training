@@ -1,26 +1,10 @@
-import { useState, useEffect } from "react";
-import type { Task } from "./types";
+import { useEffect } from "react";
 import SignupPage from "./pages/SignupPage";
 import LoginPage from "./pages/LoginPage";
-
-function TaskCard({ task }: { task: Task }) {
-  return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 mb-4 w-full max-w-md">
-      <h2 className="text-lg font-semibold text-gray-900">{task.title}</h2>
-      <p className="text-sm text-gray-500 mt-1">
-        {task.completed ? "Done" : "Not completed"}
-      </p>
-    </div>
-  );
-}
+import TasksPage from "./pages/TasksPage";
+import Layout from "./components/Layout";
 
 export default function App() {
-  const [tasks] = useState<Task[]>([
-    { id: "1", title: "Set up the project", completed: true },
-    { id: "2", title: "Build the TaskCard component", completed: true },
-    { id: "3", title: "Connect to the backend", completed: false },
-  ]);
-
   const path = window.location.pathname;
   const isPublic = path === "/signup" || path === "/login";
   const token = localStorage.getItem("token");
@@ -34,28 +18,21 @@ export default function App() {
   if (path === "/signup") return <SignupPage />;
   if (path === "/login") return <LoginPage />;
   if (!token) return null;
-
-  function handleSignOut() {
-    localStorage.removeItem("token");
-    window.location.href = "/login";
-  }
+  if (path === "/tasks") return <TasksPage />;
 
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col items-center justify-center p-8">
-      <div className="w-full max-w-md flex justify-between items-center mb-8">
-        <h1 className="text-4xl font-bold text-gray-900">Code Impact Training</h1>
-        <button
-          onClick={handleSignOut}
-          className="text-sm text-gray-500 hover:text-gray-900 underline"
+    <Layout>
+      <h1 className="text-5xl font-bold text-gray-900 text-center mt-12 mb-16">
+        Code Impact Training
+      </h1>
+      <div className="flex flex-col items-center gap-4">
+        <a
+          href="/tasks"
+          className="inline-block bg-gray-900 text-white text-base font-medium px-10 py-3 rounded hover:bg-gray-700 transition-colors duration-150"
         >
-          Sign out
-        </button>
+          Go to Tasks
+        </a>
       </div>
-      <div className="w-full max-w-md">
-        {tasks.map((task) => (
-          <TaskCard key={task.id} task={task} />
-        ))}
-      </div>
-    </div>
+    </Layout>
   );
 }

@@ -1,6 +1,6 @@
 export type Task = {
   id: string;
   title: string;
-  completed: boolean;
-  dueDate?: Date;
+  status: "UPCOMING" | "COMPLETED";
+  dueDate?: string | null;
 };

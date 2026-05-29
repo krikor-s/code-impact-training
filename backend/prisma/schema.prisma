@@ -7,9 +7,8 @@ datasource db {
 }
 
 enum Status {
-  TODO
-  IN_PROGRESS
-  DONE
+  UPCOMING
+  COMPLETED
 }
 
 model User {
@@ -25,9 +24,10 @@ model User {
 model Task {
   id        String    @id @default(cuid())
   title     String
-  completed Boolean   @default(false)
   dueDate   DateTime?
-  status    Status    @default(TODO)
+  status    Status    @default(UPCOMING)
   userId    String
   user      User      @relation(fields: [userId], references: [id])
+  createdAt DateTime  @default(now())
+  updatedAt DateTime  @updatedAt
 }

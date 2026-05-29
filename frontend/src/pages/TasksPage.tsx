@@ -43,7 +43,13 @@ export default function TasksPage() {
   }
 
   useEffect(() => {
-    fetchTasks();
+    async function load() {
+      const res = await apiFetch("/api/v1/tasks");
+      if (!res.ok) return;
+      const data = (await res.json()) as { data: Task[] };
+      setTasks(data.data);
+    }
+    void load();
   }, []);
 
   async function handleCreate(e: FormEvent) {

@@ -6,6 +6,7 @@ import {
   createTask,
   updateTask,
   deleteTask,
+  completeTask,
 } from "../services/taskService";
 
 export async function getTasksController(req: Request, res: Response) {
@@ -46,6 +47,18 @@ export async function updateTaskController(req: Request, res: Response) {
     if (status !== undefined) fields.status = status;
     if (dueDate !== undefined) fields.dueDate = dueDate ? new Date(dueDate) : null;
     const data = await updateTask(req.params.id, req.userId!, fields);
+    res.json({ success: true, data });
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message === "NOT_FOUND") {
+      return res.status(404).json({ success: false, error: "Task not found" });
+    }
+    throw err;
+  }
+}
+
+export async function completeTaskController(req: Request, res: Response) {
+  try {
+    const data = await completeTask(req.params.id, req.userId!);
     res.json({ success: true, data });
   } catch (err: unknown) {
     if (err instanceof Error && err.message === "NOT_FOUND") {

@@ -41,9 +41,10 @@ export async function createTaskController(req: Request, res: Response) {
 
 export async function updateTaskController(req: Request, res: Response) {
   try {
-    const { title, status, dueDate } = req.body;
-    const fields: { title?: string; status?: Status; dueDate?: Date | null } = {};
+    const { title, description, status, dueDate } = req.body;
+    const fields: { title?: string; description?: string | null; status?: Status; dueDate?: Date | null } = {};
     if (title !== undefined) fields.title = title;
+    if (description !== undefined) fields.description = description;
     if (status !== undefined) fields.status = status;
     if (dueDate !== undefined) fields.dueDate = dueDate ? new Date(dueDate) : null;
     const data = await updateTask(req.params.id, req.userId!, fields);

@@ -2,6 +2,7 @@ import express from "express";
 import cors from "cors";
 import taskRouter from "./routes/tasks";
 import reminderRouter from "./routes/reminders";
+import eventRouter from "./routes/events";
 import authRouter from "./routes/auth";
 import { requireAuth } from "./middleware/auth";
 
@@ -16,6 +17,7 @@ app.get("/health", (_req, res) => {
 
 app.use("/api/v1/tasks", requireAuth, taskRouter);
 app.use("/api/v1/reminders", requireAuth, reminderRouter);
+app.use("/api/v1/events", requireAuth, eventRouter);
 app.use("/api/v1/auth", authRouter);
 
 export default app;

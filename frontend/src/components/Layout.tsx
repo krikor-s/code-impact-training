@@ -7,7 +7,7 @@ function handleSignOut() {
 
 export default function Layout({ children }: { children: ReactNode }) {
   return (
-    <div className="min-h-screen bg-gray-50 flex flex-col p-8">
+    <div className="min-h-screen bg-gray-100 flex flex-col p-8">
       <div className="w-full flex justify-end mb-4">
         <button
           onClick={handleSignOut}

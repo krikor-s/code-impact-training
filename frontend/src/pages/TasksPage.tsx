@@ -323,7 +323,7 @@ export default function TasksPage() {
       </div>
 
       {recentlyDeleted.length > 0 && (
-        <div className="fixed bottom-0 left-1/2 -translate-x-1/2 w-full max-w-md bg-white border border-gray-200 rounded-t-xl shadow-lg px-4 pt-4 pb-6">
+        <div className="fixed bottom-4 right-4 w-72 bg-white border border-gray-200 rounded-xl shadow-lg px-4 pt-4 pb-5">
           <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
             Recently Deleted
           </h2>

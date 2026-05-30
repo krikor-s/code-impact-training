@@ -40,3 +40,24 @@ export async function deleteReminder(id: string, userId: string) {
   if (!reminder) throw new Error("NOT_FOUND");
   await prisma.reminder.delete({ where: { id } });
 }
+
+export async function completeReminder(id: string, userId: string) {
+  const reminder = await prisma.reminder.findFirst({ where: { id, userId } });
+  if (!reminder) throw new Error("NOT_FOUND");
+
+  await prisma.reminder.update({ where: { id }, data: { status: Status.COMPLETED } });
+
+  if (reminder.repeatFrequency === RepeatFrequency.DAILY) {
+    const next = new Date(reminder.scheduledAt);
+    next.setDate(next.getDate() + 1);
+    await prisma.reminder.create({
+      data: { title: reminder.title, userId, scheduledAt: next, repeatFrequency: RepeatFrequency.DAILY },
+    });
+  } else if (reminder.repeatFrequency === RepeatFrequency.WEEKLY) {
+    const next = new Date(reminder.scheduledAt);
+    next.setDate(next.getDate() + 7);
+    await prisma.reminder.create({
+      data: { title: reminder.title, userId, scheduledAt: next, repeatFrequency: RepeatFrequency.WEEKLY },
+    });
+  }
+}

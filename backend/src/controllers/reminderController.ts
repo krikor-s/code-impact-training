@@ -6,6 +6,7 @@ import {
   createReminder,
   updateReminder,
   deleteReminder,
+  completeReminder,
 } from "../services/reminderService";
 
 export async function getRemindersController(req: Request, res: Response) {
@@ -66,6 +67,18 @@ export async function deleteReminderController(req: Request, res: Response) {
   try {
     await deleteReminder(req.params.id, req.userId!);
     res.status(204).send();
+  } catch (err: unknown) {
+    if (err instanceof Error && err.message === "NOT_FOUND") {
+      return res.status(404).json({ success: false, error: "Reminder not found" });
+    }
+    throw err;
+  }
+}
+
+export async function completeReminderController(req: Request, res: Response) {
+  try {
+    await completeReminder(req.params.id, req.userId!);
+    res.json({ success: true });
   } catch (err: unknown) {
     if (err instanceof Error && err.message === "NOT_FOUND") {
       return res.status(404).json({ success: false, error: "Reminder not found" });

@@ -15,6 +15,7 @@ enum RepeatFrequency {
   NONE
   DAILY
   WEEKLY
+  MONTHLY
 }
 
 model User {

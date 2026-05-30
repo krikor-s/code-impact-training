@@ -59,5 +59,11 @@ export async function completeReminder(id: string, userId: string) {
     await prisma.reminder.create({
       data: { title: reminder.title, userId, scheduledAt: next, repeatFrequency: RepeatFrequency.WEEKLY },
     });
+  } else if (reminder.repeatFrequency === RepeatFrequency.MONTHLY) {
+    const next = new Date(reminder.scheduledAt);
+    next.setMonth(next.getMonth() + 1);
+    await prisma.reminder.create({
+      data: { title: reminder.title, userId, scheduledAt: next, repeatFrequency: RepeatFrequency.MONTHLY },
+    });
   }
 }

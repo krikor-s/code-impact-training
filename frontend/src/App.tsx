@@ -2,6 +2,7 @@ import { useEffect } from "react";
 import SignupPage from "./pages/SignupPage";
 import LoginPage from "./pages/LoginPage";
 import TasksPage from "./pages/TasksPage";
+import RemindersPage from "./pages/RemindersPage";
 import Layout from "./components/Layout";
 
 export default function App() {
@@ -19,19 +20,30 @@ export default function App() {
   if (path === "/login") return <LoginPage />;
   if (!token) return null;
   if (path === "/tasks") return <TasksPage />;
+  if (path === "/reminders") return <RemindersPage />;
 
   return (
     <Layout>
-      <h1 className="text-5xl font-bold text-gray-900 text-center mt-12 mb-16">
-        Code Impact Training
-      </h1>
-      <div className="flex flex-col items-center gap-4">
-        <a
-          href="/tasks"
-          className="inline-block bg-gray-900 text-white text-base font-medium px-10 py-3 rounded hover:bg-gray-700 transition-colors duration-150"
-        >
-          Go to Tasks
-        </a>
+      <div className="flex flex-col items-center mt-8">
+        <div className="border border-gray-300 bg-white rounded-xl px-10 py-5 shadow-sm mb-12">
+          <h1 className="text-4xl font-bold text-gray-800 tracking-tight">
+            Code Impact Training
+          </h1>
+        </div>
+        <div className="flex flex-col items-center gap-3">
+          <a
+            href="/tasks"
+            className="w-52 text-center bg-slate-600 text-white text-sm font-medium px-6 py-3 rounded hover:bg-slate-500 transition-colors duration-150"
+          >
+            Go to Tasks
+          </a>
+          <a
+            href="/reminders"
+            className="w-52 text-center bg-slate-600 text-white text-sm font-medium px-6 py-3 rounded hover:bg-slate-500 transition-colors duration-150"
+          >
+            Go to Reminders
+          </a>
+        </div>
       </div>
     </Layout>
   );

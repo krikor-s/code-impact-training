@@ -3,6 +3,7 @@ import SignupPage from "./pages/SignupPage";
 import LoginPage from "./pages/LoginPage";
 import TasksPage from "./pages/TasksPage";
 import RemindersPage from "./pages/RemindersPage";
+import CalendarPage from "./pages/CalendarPage";
 import Layout from "./components/Layout";
 
 export default function App() {
@@ -21,6 +22,7 @@ export default function App() {
   if (!token) return null;
   if (path === "/tasks") return <TasksPage />;
   if (path === "/reminders") return <RemindersPage />;
+  if (path === "/calendar") return <CalendarPage />;
 
   return (
     <Layout>
@@ -42,6 +44,12 @@ export default function App() {
             className="w-52 text-center bg-slate-600 text-white text-sm font-medium px-6 py-3 rounded hover:bg-slate-500 transition-colors duration-150"
           >
             Go to Reminders
+          </a>
+          <a
+            href="/calendar"
+            className="w-52 text-center bg-slate-600 text-white text-sm font-medium px-6 py-3 rounded hover:bg-slate-500 transition-colors duration-150"
+          >
+            Go to Calendar
           </a>
         </div>
       </div>

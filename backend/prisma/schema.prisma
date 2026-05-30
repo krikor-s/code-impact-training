@@ -11,6 +11,12 @@ enum Status {
   COMPLETED
 }
 
+enum RepeatFrequency {
+  NONE
+  DAILY
+  WEEKLY
+}
+
 model User {
   id        String   @id @default(cuid())
   email     String   @unique
@@ -19,6 +25,7 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
   tasks     Task[]
+  reminders Reminder[]
 }
 
 model Task {
@@ -31,4 +38,16 @@ model Task {
   user        User      @relation(fields: [userId], references: [id])
   createdAt   DateTime  @default(now())
   updatedAt   DateTime  @updatedAt
+}
+
+model Reminder {
+  id              String          @id @default(cuid())
+  title           String
+  scheduledAt     DateTime
+  repeatFrequency RepeatFrequency @default(NONE)
+  status          Status          @default(UPCOMING)
+  userId          String
+  user            User            @relation(fields: [userId], references: [id])
+  createdAt       DateTime        @default(now())
+  updatedAt       DateTime        @updatedAt
 }

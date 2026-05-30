@@ -15,3 +15,11 @@ export type Reminder = {
   repeatFrequency: RepeatFrequency;
   status: "UPCOMING" | "COMPLETED";
 };
+
+export type Event = {
+  id: string;
+  title: string;
+  description?: string | null;
+  startAt: string;
+  endAt: string;
+};

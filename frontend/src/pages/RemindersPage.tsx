@@ -62,7 +62,13 @@ export default function RemindersPage() {
   }
 
   useEffect(() => {
-    void fetchReminders();
+    async function load() {
+      const res = await apiFetch("/api/v1/reminders");
+      if (!res.ok) return;
+      const data = (await res.json()) as { data: Reminder[] };
+      setReminders(data.data);
+    }
+    void load();
   }, []);
 
   async function handleCreate(e: FormEvent) {
@@ -142,7 +148,7 @@ export default function RemindersPage() {
             </label>
             <button
               type="submit"
-              className="w-full bg-gray-900 text-white rounded px-4 py-2 text-sm font-medium hover:bg-gray-700 transition-colors duration-150"
+              className="w-full bg-slate-600 text-white rounded px-4 py-2 text-sm font-medium hover:bg-slate-500 transition-colors duration-150"
             >
               Save reminder
             </button>

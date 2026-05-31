@@ -1,5 +1,4 @@
 import { useState } from "react";
-import type { FormEvent } from "react";
 import { apiFetch } from "../lib/api";
 
 export default function SignupPage() {
@@ -8,7 +7,7 @@ export default function SignupPage() {
   const [displayName, setDisplayName] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: { preventDefault(): void }) {
     e.preventDefault();
     setError(null);
     const res = await apiFetch("/api/v1/auth/signup", {
@@ -21,6 +20,7 @@ export default function SignupPage() {
       return;
     }
     localStorage.setItem("token", data.data!.token);
+    localStorage.setItem("displayName", displayName);
     window.location.href = "/";
   }
 

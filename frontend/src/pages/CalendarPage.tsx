@@ -424,7 +424,13 @@ export default function CalendarPage() {
   }
 
   useEffect(() => {
-    void fetchEvents();
+    async function load() {
+      const res = await apiFetch("/api/v1/events");
+      if (!res.ok) return;
+      const data = (await res.json()) as { data: Event[] };
+      setEvents(data.data);
+    }
+    void load();
   }, []);
 
   async function handleSave(data: {

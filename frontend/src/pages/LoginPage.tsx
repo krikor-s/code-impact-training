@@ -1,5 +1,4 @@
 import { useState } from "react";
-import type { FormEvent } from "react";
 import { apiFetch } from "../lib/api";
 
 export default function LoginPage() {
@@ -7,19 +6,20 @@ export default function LoginPage() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(e: FormEvent) {
+  async function handleSubmit(e: { preventDefault(): void }) {
     e.preventDefault();
     setError(null);
     const res = await apiFetch("/api/v1/auth/login", {
       method: "POST",
       body: JSON.stringify({ email, password }),
     });
-    const data = (await res.json()) as { data?: { token: string }; error?: string };
+    const data = (await res.json()) as { data?: { token: string; user: { displayName: string } }; error?: string };
     if (!res.ok) {
       setError(data.error ?? "Login failed");
       return;
     }
     localStorage.setItem("token", data.data!.token);
+    localStorage.setItem("displayName", data.data!.user.displayName);
     window.location.href = "/";
   }
 

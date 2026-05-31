@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useRef } from "react";
 import Layout from "../components/Layout";
 import { apiFetch } from "../lib/api";
-import type { Event } from "../types";
+import type { Event, Task, Reminder } from "../types";
 
 type View = "month" | "week" | "day";
 
@@ -30,6 +30,17 @@ function startOfWeek(date: Date) {
 function toLocalInput(d: Date) {
   const pad = (n: number) => n.toString().padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
+function taskOnDay(task: Task, day: Date) {
+  if (!task.dueDate) return false;
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  const dayStr = `${day.getFullYear()}-${pad(day.getMonth() + 1)}-${pad(day.getDate())}`;
+  return task.dueDate.slice(0, 10) === dayStr;
+}
+
+function reminderOnDay(reminder: Reminder, day: Date) {
+  return isSameDay(new Date(reminder.scheduledAt), day);
 }
 
 function eventOnDay(event: Event, day: Date) {
@@ -101,7 +112,7 @@ function EventFormModal({
   );
   const [error, setError] = useState<string | null>(null);
 
-  async function handleSubmit(e: React.FormEvent<HTMLFormElement>) {
+  async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
     setError(null);
     if (new Date(startAt) >= new Date(endAt)) {
@@ -192,11 +203,15 @@ function EventFormModal({
 function TimeGrid({
   days,
   events,
+  tasks,
+  reminders,
   onSlotClick,
   onEventClick,
 }: {
   days: Date[];
   events: Event[];
+  tasks: Task[];
+  reminders: Reminder[];
   onSlotClick: (date: Date) => void;
   onEventClick: (event: Event) => void;
 }) {
@@ -235,6 +250,25 @@ function TimeGrid({
         })}
       </div>
 
+      {/* All-day row for tasks */}
+      <div className="flex border-b border-gray-200 bg-gray-50">
+        <div className="w-12 shrink-0 flex items-center justify-end pr-2 py-1">
+          <span className="text-xs text-gray-400">all-day</span>
+        </div>
+        {days.map((day, i) => {
+          const dayTasks = tasks.filter((t) => taskOnDay(t, day));
+          return (
+            <div key={i} className="flex-1 border-l border-gray-200 py-0.5 px-1 min-h-5">
+              {dayTasks.map((task) => (
+                <div key={task.id} className="text-xs bg-amber-500 text-white rounded px-1 py-0.5 truncate mb-0.5">
+                  {task.title}
+                </div>
+              ))}
+            </div>
+          );
+        })}
+      </div>
+
       {/* Scrollable time grid */}
       <div ref={scrollRef} className="flex overflow-y-auto" style={{ maxHeight: 600 }}>
         {/* Hour labels */}
@@ -254,6 +288,7 @@ function TimeGrid({
         {days.map((day, di) => {
           const dayEvents = events.filter((e) => eventOnDay(e, day));
           const layout = layoutDayEvents(dayEvents);
+          const dayReminders = reminders.filter((r) => reminderOnDay(r, day));
 
           return (
             <div
@@ -278,6 +313,21 @@ function TimeGrid({
                   style={{ top: h * HOUR_HEIGHT }}
                 />
               ))}
+
+              {/* Reminders */}
+              {dayReminders.map((reminder) => {
+                const scheduled = new Date(reminder.scheduledAt);
+                const top = (scheduled.getHours() + scheduled.getMinutes() / 60) * HOUR_HEIGHT;
+                return (
+                  <div
+                    key={reminder.id}
+                    className="absolute rounded px-1.5 py-0.5 bg-violet-500 text-white text-xs overflow-hidden pointer-events-none"
+                    style={{ top, height: 22, left: 0, right: 0 }}
+                  >
+                    <p className="font-medium truncate leading-tight">{reminder.title}</p>
+                  </div>
+                );
+              })}
 
               {/* Events */}
               {dayEvents.map((event) => {
@@ -321,12 +371,16 @@ function MonthView({
   cursor,
   today,
   events,
+  tasks,
+  reminders,
   onDayClick,
   onEventClick,
 }: {
   cursor: Date;
   today: Date;
   events: Event[];
+  tasks: Task[];
+  reminders: Reminder[];
   onDayClick: (date: Date) => void;
   onEventClick: (event: Event) => void;
 }) {
@@ -358,12 +412,19 @@ function MonthView({
           const isToday = isSameDay(cell, today);
           const isCurrentMonth = cell.getMonth() === month;
           const dayEvents = events.filter((e) => eventOnDay(e, cell));
+          const dayTasks = tasks.filter((t) => taskOnDay(t, cell));
+          const dayReminders = reminders.filter((r) => reminderOnDay(r, cell));
+          const allItems = [
+            ...dayEvents.map((e) => ({ type: "event" as const, id: e.id, title: e.title, event: e })),
+            ...dayTasks.map((t) => ({ type: "task" as const, id: t.id, title: t.title })),
+            ...dayReminders.map((r) => ({ type: "reminder" as const, id: r.id, title: r.title })),
+          ];
 
           return (
             <div
               key={i}
               onClick={() => onDayClick(cell)}
-              className={`border-r border-b border-gray-200 min-h-[90px] p-2 cursor-pointer hover:bg-slate-50 transition-colors duration-150 ${
+              className={`border-r border-b border-gray-200 min-h-22.5 p-2 cursor-pointer hover:bg-slate-50 transition-colors duration-150 ${
                 isCurrentMonth ? "bg-white" : "bg-gray-50"
               }`}
             >
@@ -379,20 +440,28 @@ function MonthView({
                 {cell.getDate()}
               </span>
               <div className="mt-1 flex flex-col gap-0.5">
-                {dayEvents.slice(0, 3).map((event) => (
+                {allItems.slice(0, 3).map((item) => (
                   <div
-                    key={event.id}
+                    key={item.id}
                     onClick={(e) => {
-                      e.stopPropagation();
-                      onEventClick(event);
+                      if (item.type === "event") {
+                        e.stopPropagation();
+                        onEventClick(item.event);
+                      }
                     }}
-                    className="text-xs bg-slate-600 text-white rounded px-1.5 py-0.5 truncate cursor-pointer hover:bg-slate-500 transition-colors duration-150"
+                    className={`text-xs text-white rounded px-1.5 py-0.5 truncate transition-colors duration-150 ${
+                      item.type === "event"
+                        ? "bg-slate-600 cursor-pointer hover:bg-slate-500"
+                        : item.type === "task"
+                        ? "bg-amber-500"
+                        : "bg-violet-500"
+                    }`}
                   >
-                    {event.title}
+                    {item.title}
                   </div>
                 ))}
-                {dayEvents.length > 3 && (
-                  <p className="text-xs text-gray-400">+{dayEvents.length - 3} more</p>
+                {allItems.length > 3 && (
+                  <p className="text-xs text-gray-400">+{allItems.length - 3} more</p>
                 )}
               </div>
             </div>
@@ -410,6 +479,8 @@ export default function CalendarPage() {
   const [view, setView] = useState<View>("month");
   const [cursor, setCursor] = useState(new Date(today));
   const [events, setEvents] = useState<Event[]>([]);
+  const [tasks, setTasks] = useState<Task[]>([]);
+  const [reminders, setReminders] = useState<Reminder[]>([]);
   const [modal, setModal] = useState<{
     mode: "create" | "edit";
     event?: Event;
@@ -425,10 +496,23 @@ export default function CalendarPage() {
 
   useEffect(() => {
     async function load() {
-      const res = await apiFetch("/api/v1/events");
-      if (!res.ok) return;
-      const data = (await res.json()) as { data: Event[] };
-      setEvents(data.data);
+      const [eventsRes, tasksRes, remindersRes] = await Promise.all([
+        apiFetch("/api/v1/events"),
+        apiFetch("/api/v1/tasks"),
+        apiFetch("/api/v1/reminders"),
+      ]);
+      if (eventsRes.ok) {
+        const data = (await eventsRes.json()) as { data: Event[] };
+        setEvents(data.data);
+      }
+      if (tasksRes.ok) {
+        const data = (await tasksRes.json()) as { data: Task[] };
+        setTasks(data.data);
+      }
+      if (remindersRes.ok) {
+        const data = (await remindersRes.json()) as { data: Reminder[] };
+        setReminders(data.data);
+      }
     }
     void load();
   }, []);
@@ -563,6 +647,8 @@ export default function CalendarPage() {
           cursor={cursor}
           today={today}
           events={events}
+          tasks={tasks}
+          reminders={reminders}
           onDayClick={openCreate}
           onEventClick={(event) => setModal({ mode: "edit", event })}
         />
@@ -571,6 +657,8 @@ export default function CalendarPage() {
         <TimeGrid
           days={getWeekDays()}
           events={events}
+          tasks={tasks}
+          reminders={reminders}
           onSlotClick={openCreate}
           onEventClick={(event) => setModal({ mode: "edit", event })}
         />
@@ -579,6 +667,8 @@ export default function CalendarPage() {
         <TimeGrid
           days={[cursor]}
           events={events}
+          tasks={tasks}
+          reminders={reminders}
           onSlotClick={openCreate}
           onEventClick={(event) => setModal({ mode: "edit", event })}
         />

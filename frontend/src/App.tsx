@@ -4,6 +4,7 @@ import LoginPage from "./pages/LoginPage";
 import TasksPage from "./pages/TasksPage";
 import RemindersPage from "./pages/RemindersPage";
 import CalendarPage from "./pages/CalendarPage";
+import DashboardPage from "./pages/DashboardPage";
 import Layout from "./components/Layout";
 
 export default function App() {
@@ -23,6 +24,7 @@ export default function App() {
   if (path === "/tasks") return <TasksPage />;
   if (path === "/reminders") return <RemindersPage />;
   if (path === "/calendar") return <CalendarPage />;
+  if (path === "/dashboard") return <DashboardPage />;
 
   return (
     <Layout>
@@ -50,6 +52,12 @@ export default function App() {
             className="w-52 text-center bg-slate-600 text-white text-sm font-medium px-6 py-3 rounded hover:bg-slate-500 transition-colors duration-150"
           >
             Go to Calendar
+          </a>
+          <a
+            href="/dashboard"
+            className="w-52 text-center bg-slate-600 text-white text-sm font-medium px-6 py-3 rounded hover:bg-slate-500 transition-colors duration-150"
+          >
+            Go to Dashboard
           </a>
         </div>
       </div>

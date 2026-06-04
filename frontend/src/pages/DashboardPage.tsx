@@ -3,6 +3,8 @@ import type { Task, Reminder, Event } from "../types";
 import { apiFetch } from "../lib/api";
 import Layout from "../components/Layout";
 
+type BriefingState = { status: "idle" } | { status: "loading" } | { status: "done"; text: string } | { status: "error"; message: string };
+
 function todayBounds() {
   const start = new Date();
   start.setHours(0, 0, 0, 0);
@@ -45,6 +47,7 @@ export default function DashboardPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [loading, setLoading] = useState(true);
+  const [briefing, setBriefing] = useState<BriefingState>({ status: "idle" });
 
   useEffect(() => {
     async function load() {
@@ -94,6 +97,18 @@ export default function DashboardPage() {
     return d >= todayStart && d <= todayEnd;
   });
 
+  async function handleGetBriefing() {
+    setBriefing({ status: "loading" });
+    const res = await apiFetch("/api/v1/dashboard/briefing", { method: "POST" });
+    if (!res.ok) {
+      const data = (await res.json()) as { error?: string };
+      setBriefing({ status: "error", message: data.error ?? "Failed to get briefing" });
+      return;
+    }
+    const data = (await res.json()) as { data: { briefing: string } };
+    setBriefing({ status: "done", text: data.data.briefing });
+  }
+
   const todayLabel = new Date().toLocaleDateString([], {
     weekday: "long",
     year: "numeric",
@@ -104,10 +119,31 @@ export default function DashboardPage() {
   return (
     <Layout>
       <div className="max-w-2xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-          <p className="text-gray-500 mt-1">{todayLabel}</p>
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
+            <p className="text-gray-500 mt-1">{todayLabel}</p>
+          </div>
+          <button
+            onClick={() => void handleGetBriefing()}
+            disabled={briefing.status === "loading"}
+            className="shrink-0 text-sm font-medium bg-slate-600 text-white px-4 py-2 rounded hover:bg-slate-500 disabled:opacity-50 transition-colors duration-150"
+          >
+            {briefing.status === "loading" ? "Getting briefing…" : "Get AI Briefing"}
+          </button>
         </div>
+
+        {briefing.status === "done" && (
+          <div className="mb-8 bg-slate-50 border border-slate-200 rounded-lg px-5 py-4">
+            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">AI Briefing</p>
+            <p className="text-sm text-slate-700 leading-relaxed">{briefing.text}</p>
+          </div>
+        )}
+        {briefing.status === "error" && (
+          <div className="mb-8 bg-red-50 border border-red-200 rounded-lg px-5 py-4">
+            <p className="text-sm text-red-600">{briefing.message}</p>
+          </div>
+        )}
 
         {loading ? (
           <p className="text-sm text-gray-400">Loading…</p>

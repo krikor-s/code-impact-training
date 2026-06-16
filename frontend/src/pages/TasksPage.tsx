@@ -127,7 +127,7 @@ function TaskCard({
         )}
         {task.dueDate && (
           <p className="text-xs text-gray-400 mt-0.5">
-            Due {new Date(task.dueDate).toLocaleDateString()}
+            Due {new Date(task.dueDate.slice(0, 10) + "T00:00:00").toLocaleDateString()}
           </p>
         )}
       </div>
@@ -252,12 +252,16 @@ export default function TasksPage() {
     await fetchTasks();
   }
 
-  const now = new Date();
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
   const overdue = tasks.filter(
-    (t) => t.status === "UPCOMING" && t.dueDate && new Date(t.dueDate) < now
+    (t) => t.status === "UPCOMING" && t.dueDate && new Date(t.dueDate.slice(0, 10) + "T00:00:00") < today
   );
   const upcoming = tasks.filter(
-    (t) => t.status === "UPCOMING" && (!t.dueDate || new Date(t.dueDate) >= now)
+    (t) => t.status === "UPCOMING" && t.dueDate && new Date(t.dueDate.slice(0, 10) + "T00:00:00") >= today
+  );
+  const backlog = tasks.filter(
+    (t) => t.status === "UPCOMING" && !t.dueDate
   );
   const completed = tasks.filter((t) => t.status === "COMPLETED");
 
@@ -315,6 +319,7 @@ export default function TasksPage() {
         <div className="w-full max-w-md">
           <Section title="Overdue" tasks={overdue} onRefresh={fetchTasks} onDeleted={handleDeleted} />
           <Section title="Upcoming" tasks={upcoming} onRefresh={fetchTasks} onDeleted={handleDeleted} />
+          <Section title="Backlog" tasks={backlog} onRefresh={fetchTasks} onDeleted={handleDeleted} />
           <Section title="Completed" tasks={completed} onRefresh={fetchTasks} onDeleted={handleDeleted} alwaysShow />
           {tasks.length === 0 && !showForm && (
             <p className="text-sm text-gray-400 text-center">No tasks yet.</p>

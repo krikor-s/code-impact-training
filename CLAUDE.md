@@ -2,26 +2,61 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
-## Projects
+## Project
 
-A training and assessment repository for building professional developer skills using Claude AI and modern dev tooling. Covers hands-on practice with real-world workflows: writing clean code, managing version control, and using AI-assisted development tools effectively.
+Orbit — a personal productivity app. Express + TypeScript backend, React + Vite + Tailwind frontend, Postgres database managed via Prisma.
 
-Skills practiced:
-- Git & GitHub workflows (branching, committing, pushing, pull requests, merging)
-- Using Claude Code as an AI coding assistant in VS Code
-- Professional commit conventions and code organization
-- Environment configuration and tooling setup
-- TypeScript fundamentals
+## Stack
+
+| Layer | Technology |
+|---|---|
+| Backend | Express 4, TypeScript, Node.js |
+| Frontend | React 19, Vite, Tailwind CSS 4 |
+| Database | PostgreSQL 16 (Docker) + Prisma 7 ORM |
+| Auth | JWT (jsonwebtoken + bcrypt) |
+| AI | Anthropic SDK (`@anthropic-ai/sdk`) |
+| Testing | Vitest (both backend and frontend) |
 
 ## Commands
 
-No build system is configured yet. As TypeScript and tooling are added, commands will go here.
+### Backend (`/backend`)
+```bash
+npm run dev        # start dev server (tsx, port 3000)
+npm run build      # compile TypeScript → dist/
+npm run test       # run Vitest test suite
+npm run lint       # ESLint
+npm run typecheck  # tsc --noEmit
+```
+
+### Frontend (`/frontend`)
+```bash
+npm run dev        # start Vite dev server (port 5173)
+npm run build      # type-check + Vite build → dist/
+npm run test       # run Vitest test suite
+npm run lint       # ESLint
+```
+
+### Docker (full stack)
+```bash
+docker compose up   # starts db, backend, and frontend together
+```
+
+## Architecture Pattern
+
+Backend follows a strict three-layer pattern: **route → controller → service**
+
+- `src/routes/` — Express router, maps HTTP verbs + paths to controller methods
+- `src/controllers/` — validates request input, calls service, sends response
+- `src/services/` — all business logic and Prisma queries; no Express types here
 
 ## Known Gotchas
 
-- `.env` is gitignored — never commit it
-- Commit messages use conventional commits format (e.g., `feat:`, `fix:`, `docs:`)
-- Branch names follow `feat/<issue-number>-<short-description>` (e.g., `feat/3-add-claude-md`)
+- `.env` lives at the **repo root** (`/code-impact-training/.env`), not inside `backend/`. Prisma config loads it with `path: resolve(__dirname, "../.env")`.
+- **Prisma 7** uses `prisma.config.ts` (not `schema.prisma` datasource block) to configure the datasource URL. Run `npx prisma generate` after schema changes.
+- In Docker, the backend connects to Postgres via the service hostname `db` (`DATABASE_URL=postgresql://postgres:password@db:5432/orbit`). Locally, use `localhost:5432` instead.
+- `.env` is gitignored — never commit it.
+- Commit messages use Conventional Commits format (e.g., `feat:`, `fix:`, `chore:`).
+- Branch names follow `feat/<issue-number>-<short-description>` (e.g., `feat/101-update-claude-md`).
 
 ## Tools & Versions
 

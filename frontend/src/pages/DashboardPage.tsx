@@ -2,6 +2,8 @@ import { useState, useEffect, useRef } from "react";
 import type { Task, Reminder, Event } from "../types";
 import { apiFetch } from "../lib/api";
 import Layout from "../components/Layout";
+import Card from "../components/Card";
+import Button from "../components/Button";
 
 type Weather = { temperature: number; condition: string };
 
@@ -32,11 +34,11 @@ function Section({
 }) {
   return (
     <div>
-      <h2 className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+      <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wide mb-3">
         {title}
       </h2>
       {count === 0 ? (
-        <p className="text-xs text-gray-300 italic">{empty}</p>
+        <p className="text-xs text-white/30 italic">{empty}</p>
       ) : (
         <div className="flex flex-col gap-2">{children}</div>
       )}
@@ -154,53 +156,49 @@ export default function DashboardPage() {
       <div className="max-w-2xl mx-auto">
         <div className="mb-8 flex items-start justify-between gap-4">
           <div>
-            <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
-            <p className="text-gray-500 mt-1">{todayLabel}</p>
+            <h1 className="text-3xl font-bold text-white">Dashboard</h1>
+            <p className="text-white/50 mt-1">{todayLabel}</p>
             {weather && (
-              <p className="text-gray-500 text-sm mt-1">
+              <p className="text-white/50 text-sm mt-1">
                 {weather.temperature}°F, {weather.condition}
               </p>
             )}
           </div>
-          <button
+          <Button
             onClick={() => void handleGetBriefing()}
             disabled={briefing.status === "loading"}
-            className="shrink-0 text-sm font-medium bg-slate-600 text-white px-4 py-2 rounded hover:bg-slate-500 disabled:opacity-50 transition-colors duration-150"
           >
             {briefing.status === "loading" ? "Getting briefing…" : "Get AI Briefing"}
-          </button>
+          </Button>
         </div>
 
         {briefing.status === "done" && (
-          <div className="mb-8 bg-slate-50 border border-slate-200 rounded-lg px-5 py-4">
-            <p className="text-xs font-semibold text-slate-400 uppercase tracking-wide mb-2">AI Briefing</p>
-            <p className="text-sm text-slate-700 leading-relaxed">{briefing.text}</p>
-          </div>
+          <Card className="mb-8">
+            <p className="text-xs font-semibold text-white/40 uppercase tracking-wide mb-2">AI Briefing</p>
+            <p className="text-sm text-white/80 leading-relaxed">{briefing.text}</p>
+          </Card>
         )}
         {briefing.status === "error" && (
-          <div className="mb-8 bg-red-50 border border-red-200 rounded-lg px-5 py-4">
-            <p className="text-sm text-red-600">{briefing.message}</p>
-          </div>
+          <Card className="mb-8 border-red-400/30">
+            <p className="text-sm text-red-300">{briefing.message}</p>
+          </Card>
         )}
 
         {loading ? (
-          <p className="text-sm text-gray-400">Loading…</p>
+          <p className="text-sm text-white/40">Loading…</p>
         ) : (
           <div className="flex flex-col gap-8">
             <Section title="Today's Events" empty="No events today." count={todayEvents.length}>
               {todayEvents.map((e) => (
-                <div
-                  key={e.id}
-                  className="bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-3"
-                >
-                  <p className="text-gray-900 font-medium text-sm">{e.title}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">
+                <Card key={e.id}>
+                  <p className="text-white font-medium text-sm">{e.title}</p>
+                  <p className="text-xs text-white/40 mt-0.5">
                     {formatTime(e.startAt)} – {formatTime(e.endAt)}
                   </p>
                   {e.description && (
-                    <p className="text-xs text-gray-500 mt-0.5">{e.description}</p>
+                    <p className="text-xs text-white/50 mt-0.5">{e.description}</p>
                   )}
-                </div>
+                </Card>
               ))}
             </Section>
 
@@ -212,34 +210,28 @@ export default function DashboardPage() {
               {dueTasks.map((t) => {
                 const isOverdue = t.dueDate && new Date(t.dueDate) < todayMidnight;
                 return (
-                  <div
-                    key={t.id}
-                    className="bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-3"
-                  >
-                    <p className="text-gray-900 font-medium text-sm">{t.title}</p>
+                  <Card key={t.id}>
+                    <p className="text-white font-medium text-sm">{t.title}</p>
                     {t.dueDate && (
-                      <p className={`text-xs mt-0.5 ${isOverdue ? "text-red-400" : "text-gray-400"}`}>
+                      <p className={`text-xs mt-0.5 ${isOverdue ? "text-red-300" : "text-white/40"}`}>
                         {isOverdue ? "Overdue · " : "Due "}
                         {new Date(t.dueDate).toLocaleDateString()}
                       </p>
                     )}
                     {t.description && (
-                      <p className="text-xs text-gray-500 mt-0.5">{t.description}</p>
+                      <p className="text-xs text-white/50 mt-0.5">{t.description}</p>
                     )}
-                  </div>
+                  </Card>
                 );
               })}
             </Section>
 
             <Section title="Reminders Today" empty="No reminders today." count={todayReminders.length}>
               {todayReminders.map((r) => (
-                <div
-                  key={r.id}
-                  className="bg-white rounded-lg shadow-sm border border-gray-200 px-4 py-3"
-                >
-                  <p className="text-gray-900 font-medium text-sm">{r.title}</p>
-                  <p className="text-xs text-gray-400 mt-0.5">{formatTime(r.scheduledAt)}</p>
-                </div>
+                <Card key={r.id}>
+                  <p className="text-white font-medium text-sm">{r.title}</p>
+                  <p className="text-xs text-white/40 mt-0.5">{formatTime(r.scheduledAt)}</p>
+                </Card>
               ))}
             </Section>
           </div>

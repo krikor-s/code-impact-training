@@ -15,32 +15,32 @@ export default function Layout({ children }: { children: ReactNode }) {
   const pictureUrl = profilePicture ? `${BASE_URL}${profilePicture}` : null;
 
   return (
-    <div className="min-h-screen bg-gray-100 flex flex-col p-8">
+    <div className="min-h-screen bg-ocean flex flex-col p-8">
       <div className="w-full flex justify-end items-center gap-3 mb-4">
         {pictureUrl ? (
           <a href="/profile">
             <img
               src={pictureUrl}
               alt="Profile"
-              className="w-8 h-8 rounded-full object-cover border border-gray-200"
+              className="w-8 h-8 rounded-full object-cover border border-white/30"
             />
           </a>
         ) : displayName ? (
           <a
             href="/profile"
-            className="w-8 h-8 rounded-full bg-gray-200 flex items-center justify-center text-gray-500 text-sm font-bold"
+            className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center text-white/70 text-sm font-bold"
           >
             {displayName.charAt(0).toUpperCase()}
           </a>
         ) : null}
         {displayName && (
-          <a href="/profile" className="text-sm text-gray-500 hover:text-gray-700">
+          <a href="/profile" className="text-sm text-white/70 hover:text-white">
             {displayName}
           </a>
         )}
         <button
           onClick={handleSignOut}
-          className="text-sm font-medium text-gray-600 border border-gray-300 bg-white px-4 py-2 rounded hover:bg-gray-200 transition-colors duration-150"
+          className="text-sm font-medium text-white/70 border border-white/20 bg-white/10 px-4 py-2 rounded-lg hover:bg-white/20 hover:text-white transition-colors duration-150"
         >
           Sign out
         </button>

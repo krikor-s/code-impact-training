@@ -1,13 +1,17 @@
 import { Router } from "express";
 import multer from "multer";
 import path from "path";
+import fs from "fs";
 import {
   getProfileController,
   updateProfileController,
 } from "../controllers/profileController";
 
+const uploadsDir = path.join(__dirname, "../../uploads");
+fs.mkdirSync(uploadsDir, { recursive: true });
+
 const storage = multer.diskStorage({
-  destination: path.join(__dirname, "../../uploads"),
+  destination: uploadsDir,
   filename: (_req, file, cb) => {
     const uniqueSuffix = `${Date.now()}-${Math.round(Math.random() * 1e9)}`;
     const ext = path.extname(file.originalname);

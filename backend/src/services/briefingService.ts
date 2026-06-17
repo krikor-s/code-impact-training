@@ -3,15 +3,27 @@ import { getDashboardSummary } from "./dashboardService";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-export async function generateBriefing(userId: string): Promise<string> {
-  const { events, tasks, reminders } = await getDashboardSummary(userId);
+export async function generateBriefing(
+  userId: string,
+  coords?: { lat: number; lon: number },
+  timeContext?: { localTime?: string; timezone?: string }
+): Promise<string> {
+  const { events, tasks, reminders, weather } = await getDashboardSummary(userId, coords);
 
-  const today = new Date().toLocaleDateString([], {
+  const now = new Date();
+  const today = now.toLocaleDateString([], {
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
   });
+
+  const currentTime = timeContext?.localTime ?? now.toLocaleTimeString([], {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+  const tz = timeContext?.timezone ?? "unknown timezone";
 
   const eventsText =
     events.length === 0
@@ -55,8 +67,12 @@ export async function generateBriefing(userId: string): Promise<string> {
           })
           .join("\n");
 
-  const prompt = `Today is ${today}.
+  const weatherText = weather
+    ? `Current conditions as of right now: ${weather.temperature}°F, ${weather.condition}.`
+    : null;
 
+  const prompt = `Today is ${today}. The current time is ${currentTime} (${tz}).
+${weatherText ? `\nWEATHER:\n${weatherText}\n` : ""}
 Here is the user's schedule:
 
 EVENTS:
@@ -68,7 +84,7 @@ ${tasksText}
 REMINDERS:
 ${remindersText}
 
-Write a concise, friendly daily briefing for the user based on the above. Keep it to 2-4 sentences. Focus on what's most important or time-sensitive.`;
+Write a concise, friendly daily briefing for the user based on the above. Keep it to 2-4 sentences. Use a greeting appropriate to the current time of day (morning/afternoon/evening/night). Focus on what's most important or time-sensitive.${weatherText ? " Mention the current weather conditions briefly — do not speculate about what the weather will be like later." : ""}`;
 
   const message = await client.messages.create({
     model: "claude-haiku-4-5-20251001",

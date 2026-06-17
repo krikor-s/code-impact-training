@@ -3,6 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mockEventFindMany = vi.hoisted(() => vi.fn());
 const mockTaskFindMany = vi.hoisted(() => vi.fn());
 const mockReminderFindMany = vi.hoisted(() => vi.fn());
+const mockGetWeather = vi.hoisted(() => vi.fn());
 
 vi.mock("../src/lib/prisma", () => ({
   prisma: {
@@ -12,6 +13,10 @@ vi.mock("../src/lib/prisma", () => ({
   },
 }));
 
+vi.mock("../src/services/weatherService", () => ({
+  getWeather: mockGetWeather,
+}));
+
 import { getDashboardSummary } from "../src/services/dashboardService";
 
 const userId = "user-1";
@@ -19,7 +24,7 @@ const userId = "user-1";
 describe("getDashboardSummary", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("returns events, tasks, and reminders for today", async () => {
+  it("returns events, tasks, reminders, and weather as null when no coords provided", async () => {
     const fakeEvents = [{ id: "evt-1", title: "Standup" }];
     const fakeTasks = [{ id: "task-1", title: "Fix bug" }];
     const fakeReminders = [{ id: "rem-1", title: "Call dentist" }];
@@ -34,7 +39,22 @@ describe("getDashboardSummary", () => {
       events: fakeEvents,
       tasks: fakeTasks,
       reminders: fakeReminders,
+      weather: null,
     });
+    expect(mockGetWeather).not.toHaveBeenCalled();
+  });
+
+  it("fetches weather when coords are provided", async () => {
+    const fakeWeather = { temperature: 72, condition: "clear sky" };
+    mockEventFindMany.mockResolvedValue([]);
+    mockTaskFindMany.mockResolvedValue([]);
+    mockReminderFindMany.mockResolvedValue([]);
+    mockGetWeather.mockResolvedValue(fakeWeather);
+
+    const result = await getDashboardSummary(userId, { lat: 34.05, lon: -118.25 });
+
+    expect(result.weather).toEqual(fakeWeather);
+    expect(mockGetWeather).toHaveBeenCalledWith(34.05, -118.25);
   });
 
   it("queries events within today's UTC boundaries ordered by startAt", async () => {
@@ -91,6 +111,6 @@ describe("getDashboardSummary", () => {
     mockReminderFindMany.mockResolvedValue([]);
 
     const result = await getDashboardSummary(userId);
-    expect(result).toEqual({ events: [], tasks: [], reminders: [] });
+    expect(result).toEqual({ events: [], tasks: [], reminders: [], weather: null });
   });
 });

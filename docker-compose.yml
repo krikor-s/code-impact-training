@@ -18,6 +18,8 @@ services:
       DATABASE_URL: postgresql://postgres:password@db:5432/orbit
       JWT_SECRET: ${JWT_SECRET}
       ANTHROPIC_API_KEY: ${ANTHROPIC_API_KEY}
+    volumes:
+      - ./backend/uploads:/app/uploads
     depends_on:
       - db
 

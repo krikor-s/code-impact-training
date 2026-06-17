@@ -1,7 +1,9 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { Task, Reminder, Event } from "../types";
 import { apiFetch } from "../lib/api";
 import Layout from "../components/Layout";
+
+type Weather = { temperature: number; condition: string };
 
 type BriefingState = { status: "idle" } | { status: "loading" } | { status: "done"; text: string } | { status: "error"; message: string };
 
@@ -42,23 +44,45 @@ function Section({
   );
 }
 
+function getLocation(): Promise<{ lat: number; lon: number } | null> {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) {
+      resolve(null);
+      return;
+    }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      () => resolve(null),
+      { timeout: 5000 }
+    );
+  });
+}
+
 export default function DashboardPage() {
   const [events, setEvents] = useState<Event[]>([]);
   const [tasks, setTasks] = useState<Task[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
+  const [weather, setWeather] = useState<Weather | null>(null);
   const [loading, setLoading] = useState(true);
   const [briefing, setBriefing] = useState<BriefingState>({ status: "idle" });
+  const coordsRef = useRef<{ lat: number; lon: number } | null>(null);
 
   useEffect(() => {
     async function load() {
-      const [evRes, taskRes, remRes] = await Promise.all([
-        apiFetch("/api/v1/events"),
+      const coords = await getLocation();
+      coordsRef.current = coords;
+
+      const params = coords ? `?lat=${coords.lat}&lon=${coords.lon}` : "";
+      const [dashRes, taskRes, remRes] = await Promise.all([
+        apiFetch(`/api/v1/dashboard${params}`),
         apiFetch("/api/v1/tasks"),
         apiFetch("/api/v1/reminders"),
       ]);
-      if (evRes.ok) {
-        const d = (await evRes.json()) as { data: Event[] };
-        setEvents(d.data);
+
+      if (dashRes.ok) {
+        const d = (await dashRes.json()) as { data: { events: Event[]; weather: Weather | null } };
+        setEvents(d.data.events);
+        setWeather(d.data.weather);
       }
       if (taskRes.ok) {
         const d = (await taskRes.json()) as { data: Task[] };
@@ -99,7 +123,16 @@ export default function DashboardPage() {
 
   async function handleGetBriefing() {
     setBriefing({ status: "loading" });
-    const res = await apiFetch("/api/v1/dashboard/briefing", { method: "POST" });
+    const payload: Record<string, unknown> = {
+      localTime: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true }),
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    };
+    if (coordsRef.current) {
+      payload.lat = coordsRef.current.lat;
+      payload.lon = coordsRef.current.lon;
+    }
+    const body = JSON.stringify(payload);
+    const res = await apiFetch("/api/v1/dashboard/briefing", { method: "POST", body });
     if (!res.ok) {
       const data = (await res.json()) as { error?: string };
       setBriefing({ status: "error", message: data.error ?? "Failed to get briefing" });
@@ -123,6 +156,11 @@ export default function DashboardPage() {
           <div>
             <h1 className="text-3xl font-bold text-gray-900">Dashboard</h1>
             <p className="text-gray-500 mt-1">{todayLabel}</p>
+            {weather && (
+              <p className="text-gray-500 text-sm mt-1">
+                {weather.temperature}°F, {weather.condition}
+              </p>
+            )}
           </div>
           <button
             onClick={() => void handleGetBriefing()}

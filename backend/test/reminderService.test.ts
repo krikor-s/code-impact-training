@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
+import { RepeatFrequency } from "@prisma/client";
 
 const mockFindMany = vi.hoisted(() => vi.fn());
 const mockFindFirst = vi.hoisted(() => vi.fn());
@@ -87,7 +88,7 @@ describe("createReminder", () => {
   it("creates a reminder with a repeat frequency", async () => {
     const repeating = { ...fakeReminder, repeatFrequency: "DAILY" };
     mockCreate.mockResolvedValue(repeating);
-    const result = await createReminder(userId, "Take out trash", new Date("2026-06-20T09:00:00Z"), "DAILY" as any);
+    const result = await createReminder(userId, "Take out trash", new Date("2026-06-20T09:00:00Z"), RepeatFrequency.DAILY);
     expect(result).toEqual(repeating);
     expect(mockCreate).toHaveBeenCalledWith({
       data: {

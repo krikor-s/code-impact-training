@@ -33,10 +33,17 @@ function cropToSquare(img: HTMLImageElement, zoom: number): Promise<Blob> {
 export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [displayName, setDisplayName] = useState("");
+  const [email, setEmail] = useState("");
   const [dailyGoal, setDailyGoal] = useState(50);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
+
+  const [currentPassword, setCurrentPassword] = useState("");
+  const [newPassword, setNewPassword] = useState("");
+  const [passwordSaving, setPasswordSaving] = useState(false);
+  const [passwordSuccess, setPasswordSuccess] = useState<string | null>(null);
+  const [passwordError, setPasswordError] = useState<string | null>(null);
 
   const [previewUrl, setPreviewUrl] = useState<string | null>(null);
   const [previewZoom, setPreviewZoom] = useState(1);
@@ -49,6 +56,7 @@ export default function ProfilePage() {
       .then((json: { data: Profile }) => {
         setProfile(json.data);
         setDisplayName(json.data.displayName);
+        setEmail(json.data.email);
         setDailyGoal(json.data.dailyGoal);
         if (json.data.profilePicture) {
           localStorage.setItem("profilePicture", json.data.profilePicture);
@@ -123,7 +131,7 @@ export default function ProfilePage() {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ displayName, dailyGoal }),
+      body: JSON.stringify({ displayName, email, dailyGoal }),
     });
     const json = (await res.json()) as { success: boolean; data?: Profile; error?: string };
     setSaving(false);
@@ -138,6 +146,29 @@ export default function ProfilePage() {
     setSuccess("Profile updated");
   }
 
+  async function handleChangePassword(e: { preventDefault(): void }) {
+    e.preventDefault();
+    setPasswordSaving(true);
+    setPasswordError(null);
+    setPasswordSuccess(null);
+
+    const res = await apiFetch("/api/v1/profile/password", {
+      method: "POST",
+      body: JSON.stringify({ currentPassword, newPassword }),
+    });
+    const json = (await res.json()) as { success: boolean; error?: string };
+    setPasswordSaving(false);
+
+    if (!res.ok) {
+      setPasswordError(json.error ?? "Failed to change password");
+      return;
+    }
+
+    setCurrentPassword("");
+    setNewPassword("");
+    setPasswordSuccess("Password changed");
+  }
+
   if (!profile) return null;
 
   const pictureUrl = profile.profilePicture
@@ -146,13 +177,15 @@ export default function ProfilePage() {
 
   return (
     <Layout>
-      <div className="max-w-md mx-auto mt-8">
+      <div className="w-full mt-4">
         <h1 className="text-2xl font-bold text-white mb-6">Profile</h1>
 
         {error && <p className="text-red-300 text-sm mb-4">{error}</p>}
         {success && <p className="text-emerald-300 text-sm mb-4">{success}</p>}
 
-        <Card className="mb-6">
+        <div className="grid grid-cols-1 md:grid-cols-[1fr_1fr_auto] gap-6">
+
+        <Card>
           {previewUrl ? (
             <div className="mb-6">
               <p className="text-xs font-semibold text-white/50 uppercase tracking-wide mb-3">
@@ -220,12 +253,17 @@ export default function ProfilePage() {
             </div>
           )}
 
-          <div className="mb-4">
-            <span className="text-xs font-semibold text-white/50 uppercase tracking-wide">Email</span>
-            <p className="text-sm text-white mt-1">{profile.email}</p>
-          </div>
-
           <form onSubmit={handleUpdateProfile}>
+            <label className="block mb-4">
+              <span className="text-xs font-semibold text-white/50 uppercase tracking-wide">Email</span>
+              <input
+                type="email"
+                value={email}
+                onChange={(e) => setEmail(e.target.value)}
+                required
+                className="mt-1 block w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/40"
+              />
+            </label>
             <label className="block mb-4">
               <span className="text-xs font-semibold text-white/50 uppercase tracking-wide">Display Name</span>
               <input
@@ -262,53 +300,69 @@ export default function ProfilePage() {
           </form>
         </Card>
 
-        <Card className="mb-6">
-          <p className="text-xs font-semibold text-white/50 uppercase tracking-wide mb-3">Streak</p>
-          <div className="flex gap-6 mb-4">
+        <Card>
+          <p className="text-xs font-semibold text-white/50 uppercase tracking-wide mb-3">Change Password</p>
+          {passwordError && <p className="text-red-300 text-sm mb-3">{passwordError}</p>}
+          {passwordSuccess && <p className="text-emerald-300 text-sm mb-3">{passwordSuccess}</p>}
+          <form onSubmit={handleChangePassword}>
+            <label className="block mb-3">
+              <span className="text-xs text-white/50">Current password</span>
+              <input
+                type="password"
+                value={currentPassword}
+                onChange={(e) => setCurrentPassword(e.target.value)}
+                required
+                className="mt-1 block w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/40"
+              />
+            </label>
+            <label className="block mb-4">
+              <span className="text-xs text-white/50">New password</span>
+              <input
+                type="password"
+                value={newPassword}
+                onChange={(e) => setNewPassword(e.target.value)}
+                required
+                minLength={6}
+                className="mt-1 block w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/40"
+              />
+            </label>
+            <Button type="submit" disabled={passwordSaving} className="w-full py-2.5">
+              {passwordSaving ? "Changing..." : "Change password"}
+            </Button>
+          </form>
+        </Card>
+
+        <Card className="w-48">
+          <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wide mb-2">Streak</p>
+          <div className="flex gap-4 mb-3">
             <div>
-              <p className="text-2xl font-bold text-white">{profile.currentStreak}</p>
-              <p className="text-xs text-white/40">Current</p>
+              <p className="text-lg font-bold text-white">{profile.currentStreak}</p>
+              <p className="text-[10px] text-white/40">Current</p>
             </div>
             <div>
-              <p className="text-2xl font-bold text-white">{profile.longestStreak}</p>
-              <p className="text-xs text-white/40">Longest</p>
+              <p className="text-lg font-bold text-white">{profile.longestStreak}</p>
+              <p className="text-[10px] text-white/40">Longest</p>
             </div>
           </div>
-          <div className="border-t border-white/10 pt-3">
-            <p className="text-xs font-semibold text-white/50 uppercase tracking-wide mb-2">Badges</p>
-            <p className="text-xs text-white/30 mb-2">Hit your daily goal on consecutive days to unlock ocean-themed badges.</p>
-            <div className="flex flex-col gap-2.5">
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className={`text-base ${profile.longestStreak >= 3 ? "" : "opacity-30"}`}>🐚</span>
-                  <span className="text-xs text-white/70">Shell</span>
+          <div className="border-t border-white/10 pt-2">
+            <div className="flex flex-col gap-1.5">
+              {[
+                { icon: "🐚", name: "Shell", milestone: 3 },
+                { icon: "🦪", name: "Pearl", milestone: 7 },
+                { icon: "🌊", name: "Wave", milestone: 14 },
+                { icon: "⚓", name: "Anchor", milestone: 30 },
+              ].map((b) => (
+                <div key={b.name} className="flex items-center gap-1.5">
+                  <span className={`text-xs ${profile.longestStreak >= b.milestone ? "" : "opacity-30"}`}>{b.icon}</span>
+                  <span className={`text-[10px] ${profile.longestStreak >= b.milestone ? "text-white/60" : "text-white/25"}`}>{b.name}</span>
+                  {profile.longestStreak < b.milestone && <span className="text-[10px] text-white/20 ml-auto">{b.milestone}d</span>}
                 </div>
-                <span className={`text-xs ${profile.longestStreak >= 3 ? "text-emerald-400" : "text-white/30"}`}>{profile.longestStreak >= 3 ? "Unlocked" : "3 day streak"}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className={`text-base ${profile.longestStreak >= 7 ? "" : "opacity-30"}`}>🦪</span>
-                  <span className="text-xs text-white/70">Pearl</span>
-                </div>
-                <span className={`text-xs ${profile.longestStreak >= 7 ? "text-emerald-400" : "text-white/30"}`}>{profile.longestStreak >= 7 ? "Unlocked" : "7 day streak"}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className={`text-base ${profile.longestStreak >= 14 ? "" : "opacity-30"}`}>🌊</span>
-                  <span className="text-xs text-white/70">Wave</span>
-                </div>
-                <span className={`text-xs ${profile.longestStreak >= 14 ? "text-emerald-400" : "text-white/30"}`}>{profile.longestStreak >= 14 ? "Unlocked" : "14 day streak"}</span>
-              </div>
-              <div className="flex items-center justify-between">
-                <div className="flex items-center gap-2">
-                  <span className={`text-base ${profile.longestStreak >= 30 ? "" : "opacity-30"}`}>⚓</span>
-                  <span className="text-xs text-white/70">Anchor</span>
-                </div>
-                <span className={`text-xs ${profile.longestStreak >= 30 ? "text-emerald-400" : "text-white/30"}`}>{profile.longestStreak >= 30 ? "Unlocked" : "30 day streak"}</span>
-              </div>
+              ))}
             </div>
+            <p className="text-[9px] text-white/20 mt-2">Keep your streak alive to collect these.</p>
           </div>
         </Card>
+        </div>
       </div>
     </Layout>
   );

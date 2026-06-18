@@ -710,7 +710,9 @@ export default function CalendarPage() {
         <TimeGrid days={getWeekDays()} events={events} tasks={tasks} reminders={reminders} onSlotClick={openCreate} onEventClick={(event) => setModal({ mode: "edit", event })} onReminderClick={setReminderModal} onTaskClick={setTaskModal} />
       )}
       {view === "day" && (
-        <TimeGrid days={[cursor]} events={events} tasks={tasks} reminders={reminders} onSlotClick={openCreate} onEventClick={(event) => setModal({ mode: "edit", event })} onReminderClick={setReminderModal} onTaskClick={setTaskModal} />
+        <div className="max-w-xl">
+          <TimeGrid days={[cursor]} events={events} tasks={tasks} reminders={reminders} onSlotClick={openCreate} onEventClick={(event) => setModal({ mode: "edit", event })} onReminderClick={setReminderModal} onTaskClick={setTaskModal} />
+        </div>
       )}
 
       {modal && (

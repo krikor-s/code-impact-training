@@ -5,6 +5,7 @@ import fs from "fs";
 import {
   getProfileController,
   updateProfileController,
+  changePasswordController,
 } from "../controllers/profileController";
 
 const uploadsDir = path.join(__dirname, "../../uploads");
@@ -37,5 +38,6 @@ const router = Router();
 
 router.get("/", getProfileController);
 router.patch("/", upload.single("profilePicture"), updateProfileController);
+router.post("/password", changePasswordController);
 
 export default router;

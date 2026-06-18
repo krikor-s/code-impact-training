@@ -26,7 +26,7 @@ export default function Layout({ children }: { children: ReactNode }) {
   return (
     <div className="min-h-screen bg-ocean flex">
       <nav className="w-52 shrink-0 glass flex flex-col p-4 m-4 mr-0 rounded-xl">
-        <a href="/" className="text-lg font-bold text-white mb-6 px-2">Orbit</a>
+        <a href="/" className="text-2xl font-bold text-white mb-6 px-2 tracking-tight">Orbit</a>
         <div className="flex flex-col gap-1">
           {NAV_ITEMS.map((item) => (
             <a

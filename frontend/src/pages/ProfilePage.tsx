@@ -264,7 +264,7 @@ export default function ProfilePage() {
 
         <Card className="mb-6">
           <p className="text-xs font-semibold text-white/50 uppercase tracking-wide mb-3">Streak</p>
-          <div className="flex gap-6">
+          <div className="flex gap-6 mb-4">
             <div>
               <p className="text-2xl font-bold text-white">{profile.currentStreak}</p>
               <p className="text-xs text-white/40">Current</p>
@@ -272,6 +272,40 @@ export default function ProfilePage() {
             <div>
               <p className="text-2xl font-bold text-white">{profile.longestStreak}</p>
               <p className="text-xs text-white/40">Longest</p>
+            </div>
+          </div>
+          <div className="border-t border-white/10 pt-3">
+            <p className="text-xs font-semibold text-white/50 uppercase tracking-wide mb-2">Badges</p>
+            <p className="text-xs text-white/30 mb-2">Hit your daily goal on consecutive days to unlock ocean-themed badges.</p>
+            <div className="flex flex-col gap-2.5">
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={`text-base ${profile.longestStreak >= 3 ? "" : "opacity-30"}`}>🐚</span>
+                  <span className="text-xs text-white/70">Shell</span>
+                </div>
+                <span className={`text-xs ${profile.longestStreak >= 3 ? "text-emerald-400" : "text-white/30"}`}>{profile.longestStreak >= 3 ? "Unlocked" : "3 day streak"}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={`text-base ${profile.longestStreak >= 7 ? "" : "opacity-30"}`}>🦪</span>
+                  <span className="text-xs text-white/70">Pearl</span>
+                </div>
+                <span className={`text-xs ${profile.longestStreak >= 7 ? "text-emerald-400" : "text-white/30"}`}>{profile.longestStreak >= 7 ? "Unlocked" : "7 day streak"}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={`text-base ${profile.longestStreak >= 14 ? "" : "opacity-30"}`}>🌊</span>
+                  <span className="text-xs text-white/70">Wave</span>
+                </div>
+                <span className={`text-xs ${profile.longestStreak >= 14 ? "text-emerald-400" : "text-white/30"}`}>{profile.longestStreak >= 14 ? "Unlocked" : "14 day streak"}</span>
+              </div>
+              <div className="flex items-center justify-between">
+                <div className="flex items-center gap-2">
+                  <span className={`text-base ${profile.longestStreak >= 30 ? "" : "opacity-30"}`}>⚓</span>
+                  <span className="text-xs text-white/70">Anchor</span>
+                </div>
+                <span className={`text-xs ${profile.longestStreak >= 30 ? "text-emerald-400" : "text-white/30"}`}>{profile.longestStreak >= 30 ? "Unlocked" : "30 day streak"}</span>
+              </div>
             </div>
           </div>
         </Card>

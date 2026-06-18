@@ -14,6 +14,25 @@ type Streak = {
   badges: Badge[];
   nextBadge: Badge | null;
 };
+type WidgetType = "weather" | "completion" | "streak" | "date" | "profile";
+const WIDGET_LABELS: Record<WidgetType, string> = {
+  weather: "Weather",
+  completion: "Completion",
+  streak: "Streak",
+  date: "Date & Time",
+  profile: "Profile",
+};
+const ALL_WIDGETS: WidgetType[] = ["weather", "completion", "streak", "date", "profile"];
+const DEFAULT_WIDGETS: WidgetType[] = ["weather", "completion", "streak"];
+
+function loadWidgets(): WidgetType[] {
+  const saved = localStorage.getItem("dashboardWidgets");
+  if (saved) {
+    try { return JSON.parse(saved) as WidgetType[]; } catch { /* fall through */ }
+  }
+  return DEFAULT_WIDGETS;
+}
+
 type BriefingState =
   | { status: "idle" }
   | { status: "loading" }
@@ -65,7 +84,7 @@ function ExpandableTask({
           <p className="text-white font-medium text-sm">{task.title}</p>
           {task.dueDate && (
             <p className="text-xs text-white/40 mt-0.5">
-              Due {new Date(task.dueDate).toLocaleDateString()}
+              Due {new Date(task.dueDate.slice(0, 10) + "T00:00:00").toLocaleDateString()}
             </p>
           )}
         </div>
@@ -159,6 +178,8 @@ export default function DashboardPage() {
   const [streak, setStreak] = useState<Streak | null>(null);
   const [loading, setLoading] = useState(true);
   const [briefing, setBriefing] = useState<BriefingState>({ status: "idle" });
+  const [widgets, setWidgets] = useState<WidgetType[]>(loadWidgets);
+  const [editingSlot, setEditingSlot] = useState<number | null>(null);
   const [showWelcome, setShowWelcome] = useState(() => {
     if (localStorage.getItem("showWelcome") === "true") {
       localStorage.removeItem("showWelcome");
@@ -213,7 +234,7 @@ export default function DashboardPage() {
 
   const dueTasks = tasks.filter((t) => {
     if (t.status !== "UPCOMING" || !t.dueDate) return false;
-    const d = new Date(t.dueDate); d.setHours(23, 59, 59, 999);
+    const d = new Date(t.dueDate.slice(0, 10) + "T00:00:00"); d.setHours(23, 59, 59, 999);
     return d <= todayEnd;
   });
 
@@ -272,6 +293,14 @@ export default function DashboardPage() {
     setBriefing({ status: "done", text: data.data.briefing });
   }
 
+  function swapWidget(slot: number, newType: WidgetType) {
+    const updated = [...widgets];
+    updated[slot] = newType;
+    setWidgets(updated);
+    localStorage.setItem("dashboardWidgets", JSON.stringify(updated));
+    setEditingSlot(null);
+  }
+
   const displayName = localStorage.getItem("displayName") ?? "there";
   const todayLabel = now.toLocaleDateString([], { weekday: "long", month: "long", day: "numeric" });
 
@@ -292,13 +321,19 @@ export default function DashboardPage() {
         <div className="mb-8 flex items-start justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-white">Hey, {displayName}</h1>
-            <p className="text-white/50 mt-1">{todayLabel}</p>
+            {!widgets.includes("date") && <p className="text-white/50 mt-1">{todayLabel}</p>}
           </div>
           <Button
-            onClick={() => void handleGetBriefing()}
+            onClick={() => {
+              if (briefing.status === "done" || briefing.status === "error") {
+                setBriefing({ status: "idle" });
+              } else {
+                void handleGetBriefing();
+              }
+            }}
             disabled={briefing.status === "loading"}
           >
-            {briefing.status === "loading" ? "Getting briefing…" : "Get AI Briefing"}
+            {briefing.status === "loading" ? "Getting briefing…" : briefing.status === "done" || briefing.status === "error" ? "Hide Briefing" : "Get AI Briefing"}
           </Button>
         </div>
 
@@ -315,59 +350,94 @@ export default function DashboardPage() {
         )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-          {/* Weather tile */}
-          <Card className="flex flex-col items-center justify-center py-6">
-            {weather ? (
-              <>
-                <p className="text-3xl font-bold text-white">{weather.temperature}°F</p>
-                <p className="text-sm text-white/50 mt-1 capitalize">{weather.condition}</p>
-              </>
-            ) : (
-              <p className="text-sm text-white/30">No weather data</p>
-            )}
-          </Card>
+          {widgets.map((widget, i) => (
+            <Card key={`${widget}-${i}`} className="relative flex flex-col items-center justify-center py-6 group">
+              <button
+                onClick={() => setEditingSlot(editingSlot === i ? null : i)}
+                className="absolute top-2 right-2 text-white/20 hover:text-white/60 text-xs opacity-0 group-hover:opacity-100 transition-opacity duration-150"
+                title="Change widget"
+              >
+                ···
+              </button>
+              {editingSlot === i && (
+                <div className="absolute top-8 right-2 z-20 rounded-lg py-1 min-w-28 bg-[#0a1e38]/95 border border-white/20 shadow-xl backdrop-blur-sm">
+                  {ALL_WIDGETS.map((w) => (
+                    <button
+                      key={w}
+                      onClick={() => swapWidget(i, w)}
+                      className={`block w-full text-left text-xs px-3 py-1.5 transition-colors duration-150 ${
+                        widget === w ? "text-white bg-white/20 font-medium" : "text-white/80 hover:text-white hover:bg-white/10"
+                      }`}
+                    >
+                      {WIDGET_LABELS[w]}
+                    </button>
+                  ))}
+                </div>
+              )}
 
-          {/* Completion tile */}
-          <Card className="flex flex-col items-center justify-center py-6">
-            <p className="text-3xl font-bold text-white">{pct}%</p>
-            <p className="text-sm text-white/50 mt-1">Completed today</p>
-            <div className="w-full mt-3 bg-white/10 rounded-full h-1.5">
-              <div
-                className="bg-emerald-400 h-1.5 rounded-full transition-all duration-500"
-                style={{ width: `${pct}%` }}
-              />
-            </div>
-          </Card>
+              {widget === "weather" && (
+                weather ? (
+                  <>
+                    <p className="text-3xl font-bold text-white">{weather.temperature}°F</p>
+                    <p className="text-sm text-white/50 mt-1 capitalize">{weather.condition}</p>
+                  </>
+                ) : (
+                  <p className="text-sm text-white/30">No weather data</p>
+                )
+              )}
 
-          {/* Streak tile */}
-          <Card className="flex flex-col items-center justify-center py-6">
-            {streak ? (
-              <>
-                <p className="text-3xl font-bold text-white">{streak.current}</p>
-                <p className="text-sm text-white/50 mt-1">Day streak</p>
-                {streak.badges.length > 0 && (
-                  <div className="flex gap-1.5 mt-2">
-                    {streak.badges.map((b) => (
-                      <span
-                        key={b.tier}
-                        className="text-xs bg-white/15 text-white/70 px-2 py-0.5 rounded-full"
-                        title={`${b.name} — ${b.milestone} day streak`}
-                      >
-                        {b.name}
-                      </span>
-                    ))}
+              {widget === "completion" && (
+                <>
+                  <p className="text-3xl font-bold text-white">{pct}%</p>
+                  <p className="text-sm text-white/50 mt-1">Completed today</p>
+                  <div className="w-full mt-3 bg-white/10 rounded-full h-1.5">
+                    <div className="bg-emerald-400 h-1.5 rounded-full transition-all duration-500" style={{ width: `${pct}%` }} />
                   </div>
-                )}
-                {streak.nextBadge && (
-                  <p className="text-xs text-white/30 mt-1">
-                    {streak.nextBadge.milestone - streak.longest} days to {streak.nextBadge.name}
-                  </p>
-                )}
-              </>
-            ) : (
-              <p className="text-sm text-white/30">Loading…</p>
-            )}
-          </Card>
+                </>
+              )}
+
+              {widget === "streak" && (
+                streak ? (
+                  <>
+                    <p className="text-3xl font-bold text-white">{streak.current}</p>
+                    <p className="text-sm text-white/50 mt-1">Day streak</p>
+                    {streak.badges.length > 0 && (
+                      <div className="flex gap-1.5 mt-2">
+                        {streak.badges.map((b) => (
+                          <span key={b.tier} className="text-xs bg-white/15 text-white/70 px-2 py-0.5 rounded-full" title={`${b.name} — ${b.milestone} day streak`}>
+                            {b.name}
+                          </span>
+                        ))}
+                      </div>
+                    )}
+                    {streak.nextBadge && (
+                      <p className="text-xs text-white/30 mt-1">{streak.nextBadge.milestone - streak.longest} days to {streak.nextBadge.name}</p>
+                    )}
+                  </>
+                ) : (
+                  <p className="text-sm text-white/30">Loading…</p>
+                )
+              )}
+
+              {widget === "date" && (
+                <>
+                  <p className="text-3xl font-bold text-white">{new Date().toLocaleDateString([], { month: "short", day: "numeric" })}</p>
+                  <p className="text-sm text-white/50 mt-1">{new Date().toLocaleDateString([], { weekday: "long" })}</p>
+                  <p className="text-xs text-white/30 mt-1">{new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
+                </>
+              )}
+
+              {widget === "profile" && (
+                <a href="/profile" className="flex flex-col items-center">
+                  <div className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center text-white font-bold mb-2">
+                    {displayName.charAt(0).toUpperCase()}
+                  </div>
+                  <p className="text-sm text-white font-medium">{displayName}</p>
+                  <p className="text-xs text-white/40">View profile</p>
+                </a>
+              )}
+            </Card>
+          ))}
         </div>
 
         {loading ? (

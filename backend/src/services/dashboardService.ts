@@ -4,9 +4,9 @@ import { getWeather } from "./weatherService";
 export async function getDashboardSummary(userId: string, coords?: { lat: number; lon: number }) {
   const now = new Date();
   const todayStart = new Date(now);
-  todayStart.setUTCHours(0, 0, 0, 0);
+  todayStart.setHours(0, 0, 0, 0);
   const todayEnd = new Date(now);
-  todayEnd.setUTCHours(23, 59, 59, 999);
+  todayEnd.setHours(23, 59, 59, 999);
 
   const [events, tasks, reminders, weather] = await Promise.all([
     prisma.event.findMany({

@@ -31,10 +31,11 @@ export async function createTaskController(req: Request, res: Response) {
   if (!title) {
     return res.status(400).json({ success: false, error: "Missing required fields" });
   }
+  const parsedDueDate = dueDate ? new Date(dueDate.length === 10 ? dueDate + "T12:00:00" : dueDate) : undefined;
   const data = await createTask(
     req.userId!,
     title,
-    dueDate ? new Date(dueDate) : undefined
+    parsedDueDate
   );
   res.status(201).json({ success: true, data });
 }
@@ -46,7 +47,7 @@ export async function updateTaskController(req: Request, res: Response) {
     if (title !== undefined) fields.title = title;
     if (description !== undefined) fields.description = description;
     if (status !== undefined) fields.status = status;
-    if (dueDate !== undefined) fields.dueDate = dueDate ? new Date(dueDate) : null;
+    if (dueDate !== undefined) fields.dueDate = dueDate ? new Date(dueDate.length === 10 ? dueDate + "T12:00:00" : dueDate) : null;
     const data = await updateTask(req.params.id, req.userId!, fields);
     res.json({ success: true, data });
   } catch (err: unknown) {

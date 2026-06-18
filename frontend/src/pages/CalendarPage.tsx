@@ -84,7 +84,7 @@ function CreateFormModal({
 }: {
   defaultDate: Date;
   onSaveEvent: (data: { title: string; description?: string; startAt: string; endAt: string }) => Promise<void>;
-  onSaveReminder: (data: { title: string; scheduledAt: string }) => Promise<void>;
+  onSaveReminder: (data: { title: string; scheduledAt: string; repeatFrequency: RepeatFrequency }) => Promise<void>;
   onSaveTask: (data: { title: string; description?: string; dueDate: string }) => Promise<void>;
   onClose: () => void;
 }) {
@@ -99,6 +99,7 @@ function CreateFormModal({
   const [startAt, setStartAt] = useState(toLocalInput(defaultDate));
   const [endAt, setEndAt] = useState(toLocalInput(defaultEnd));
   const [scheduledAt, setScheduledAt] = useState(toLocalInput(defaultDate));
+  const [repeatFrequency, setRepeatFrequency] = useState<RepeatFrequency>("NONE");
   const [dueDate, setDueDate] = useState(dateStr);
   const [error, setError] = useState<string | null>(null);
 
@@ -109,7 +110,7 @@ function CreateFormModal({
       if (new Date(startAt) >= new Date(endAt)) { setError("End must be after start"); return; }
       await onSaveEvent({ title, description: description || undefined, startAt, endAt });
     } else if (type === "reminder") {
-      await onSaveReminder({ title, scheduledAt });
+      await onSaveReminder({ title, scheduledAt, repeatFrequency });
     } else {
       await onSaveTask({ title, description: description || undefined, dueDate });
     }
@@ -155,10 +156,21 @@ function CreateFormModal({
             </>
           )}
           {type === "reminder" && (
-            <label className="flex flex-col gap-1">
-              <span className="text-xs font-medium text-white/50">Scheduled at</span>
-              <input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} required className={inputClass} />
-            </label>
+            <>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-white/50">Scheduled at</span>
+                <input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} required className={inputClass} />
+              </label>
+              <label className="flex flex-col gap-1">
+                <span className="text-xs font-medium text-white/50">Repeat</span>
+                <select value={repeatFrequency} onChange={(e) => setRepeatFrequency(e.target.value as RepeatFrequency)} className={inputClass}>
+                  <option value="NONE">None</option>
+                  <option value="DAILY">Daily</option>
+                  <option value="WEEKLY">Weekly</option>
+                  <option value="MONTHLY">Monthly</option>
+                </select>
+              </label>
+            </>
           )}
           {type === "task" && (
             <label className="flex flex-col gap-1">
@@ -659,7 +671,7 @@ export default function CalendarPage() {
     if (res.ok) { setCreateDate(null); await fetchAll(); }
   }
 
-  async function handleCreateReminder(data: { title: string; scheduledAt: string }) {
+  async function handleCreateReminder(data: { title: string; scheduledAt: string; repeatFrequency: RepeatFrequency }) {
     const res = await apiFetch("/api/v1/reminders", { method: "POST", body: JSON.stringify(data) });
     if (res.ok) { setCreateDate(null); await fetchAll(); }
   }

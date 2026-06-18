@@ -19,16 +19,20 @@ enum RepeatFrequency {
 }
 
 model User {
-  id             String   @id @default(cuid())
-  email          String   @unique
-  passwordHash   String
-  displayName    String
-  profilePicture String?
-  createdAt      DateTime @default(now())
-  updatedAt      DateTime @updatedAt
-  tasks          Task[]
-  reminders      Reminder[]
-  events         Event[]
+  id               String    @id @default(cuid())
+  email            String    @unique
+  passwordHash     String
+  displayName      String
+  profilePicture   String?
+  dailyGoal        Int       @default(50)
+  currentStreak    Int       @default(0)
+  longestStreak    Int       @default(0)
+  lastStreakDate   DateTime?
+  createdAt        DateTime  @default(now())
+  updatedAt        DateTime  @updatedAt
+  tasks            Task[]
+  reminders        Reminder[]
+  events           Event[]
 }
 
 model Task {

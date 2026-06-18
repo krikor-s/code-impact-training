@@ -1,11 +1,16 @@
 import { useState, useEffect, useRef } from "react";
 import { apiFetch } from "../lib/api";
 import Layout from "../components/Layout";
+import Card from "../components/Card";
+import Button from "../components/Button";
 
 type Profile = {
   displayName: string;
   email: string;
   profilePicture: string | null;
+  dailyGoal: number;
+  currentStreak: number;
+  longestStreak: number;
 };
 
 const BASE_URL = (import.meta.env.VITE_API_URL as string) ?? "";
@@ -25,16 +30,10 @@ function cropToSquare(img: HTMLImageElement, zoom: number): Promise<Blob> {
   });
 }
 
-function handleSignOut() {
-  localStorage.removeItem("token");
-  localStorage.removeItem("displayName");
-  localStorage.removeItem("profilePicture");
-  window.location.href = "/login";
-}
-
 export default function ProfilePage() {
   const [profile, setProfile] = useState<Profile | null>(null);
   const [displayName, setDisplayName] = useState("");
+  const [dailyGoal, setDailyGoal] = useState(50);
   const [saving, setSaving] = useState(false);
   const [success, setSuccess] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -50,6 +49,7 @@ export default function ProfilePage() {
       .then((json: { data: Profile }) => {
         setProfile(json.data);
         setDisplayName(json.data.displayName);
+        setDailyGoal(json.data.dailyGoal);
         if (json.data.profilePicture) {
           localStorage.setItem("profilePicture", json.data.profilePicture);
         }
@@ -110,7 +110,7 @@ export default function ProfilePage() {
     cancelPreview();
   }
 
-  async function handleUpdateName(e: { preventDefault(): void }) {
+  async function handleUpdateProfile(e: { preventDefault(): void }) {
     e.preventDefault();
     setSaving(true);
     setError(null);
@@ -123,7 +123,7 @@ export default function ProfilePage() {
         "Content-Type": "application/json",
         Authorization: `Bearer ${token}`,
       },
-      body: JSON.stringify({ displayName }),
+      body: JSON.stringify({ displayName, dailyGoal }),
     });
     const json = (await res.json()) as { success: boolean; data?: Profile; error?: string };
     setSaving(false);
@@ -135,7 +135,7 @@ export default function ProfilePage() {
 
     setProfile(json.data!);
     localStorage.setItem("displayName", json.data!.displayName);
-    setSuccess("Display name updated");
+    setSuccess("Profile updated");
   }
 
   if (!profile) return null;
@@ -147,19 +147,19 @@ export default function ProfilePage() {
   return (
     <Layout>
       <div className="max-w-md mx-auto mt-8">
-        <h1 className="text-2xl font-bold text-gray-900 mb-6">Profile</h1>
+        <h1 className="text-2xl font-bold text-white mb-6">Profile</h1>
 
-        {error && <p className="text-red-600 text-sm mb-4">{error}</p>}
-        {success && <p className="text-green-600 text-sm mb-4">{success}</p>}
+        {error && <p className="text-red-300 text-sm mb-4">{error}</p>}
+        {success && <p className="text-emerald-300 text-sm mb-4">{success}</p>}
 
-        <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-6 mb-6">
+        <Card className="mb-6">
           {previewUrl ? (
             <div className="mb-6">
-              <p className="text-xs font-semibold text-gray-500 uppercase tracking-wide mb-3">
+              <p className="text-xs font-semibold text-white/50 uppercase tracking-wide mb-3">
                 Adjust & save
               </p>
               <div className="flex items-center gap-5 mb-3">
-                <div className="w-24 h-24 rounded-full overflow-hidden border border-gray-200 shrink-0">
+                <div className="w-24 h-24 rounded-full overflow-hidden border border-white/20 shrink-0">
                   <img
                     src={previewUrl}
                     alt="Preview"
@@ -169,7 +169,7 @@ export default function ProfilePage() {
                 </div>
                 <div className="flex-1">
                   <label className="flex items-center gap-3 mb-3">
-                    <span className="text-xs text-gray-500">Zoom</span>
+                    <span className="text-xs text-white/50">Zoom</span>
                     <input
                       type="range"
                       min="1"
@@ -181,41 +181,30 @@ export default function ProfilePage() {
                     />
                   </label>
                   <div className="flex gap-2">
-                    <button
-                      onClick={handleSavePicture}
-                      disabled={saving}
-                      className="bg-slate-600 text-white text-sm font-medium px-4 py-2 rounded hover:bg-slate-500 transition-colors duration-150 disabled:opacity-50"
-                    >
+                    <Button onClick={handleSavePicture} disabled={saving} className="text-xs px-3 py-1">
                       {saving ? "Saving..." : "Save"}
-                    </button>
-                    <button
-                      onClick={cancelPreview}
-                      className="border border-gray-300 bg-white text-gray-600 text-sm font-medium px-4 py-2 rounded hover:bg-gray-200 transition-colors duration-150"
-                    >
+                    </Button>
+                    <Button variant="secondary" onClick={cancelPreview} className="text-xs px-3 py-1">
                       Cancel
-                    </button>
+                    </Button>
                   </div>
                 </div>
               </div>
             </div>
           ) : (
             <div className="flex items-center gap-5 mb-6">
-              <div className="w-20 h-20 rounded-full overflow-hidden border border-gray-200 shrink-0">
+              <div className="w-20 h-20 rounded-full overflow-hidden border border-white/20 shrink-0">
                 {pictureUrl ? (
-                  <img
-                    src={pictureUrl}
-                    alt="Profile"
-                    className="w-full h-full object-cover"
-                  />
+                  <img src={pictureUrl} alt="Profile" className="w-full h-full object-cover" />
                 ) : (
-                  <div className="w-full h-full bg-gray-200 flex items-center justify-center text-gray-500 text-2xl font-bold">
+                  <div className="w-full h-full bg-white/15 flex items-center justify-center text-white/70 text-2xl font-bold">
                     {profile.displayName.charAt(0).toUpperCase()}
                   </div>
                 )}
               </div>
               <div>
                 <label className="block">
-                  <span className="text-sm font-medium text-gray-700 cursor-pointer hover:text-gray-900">
+                  <span className="text-sm font-medium text-white/70 cursor-pointer hover:text-white">
                     Upload picture
                   </span>
                   <input
@@ -226,43 +215,66 @@ export default function ProfilePage() {
                     className="hidden"
                   />
                 </label>
-                <p className="text-xs text-gray-400 mt-1">JPG, PNG, or WebP. Max 5MB.</p>
+                <p className="text-xs text-white/30 mt-1">JPG, PNG, or WebP. Max 5MB.</p>
               </div>
             </div>
           )}
 
           <div className="mb-4">
-            <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Email</span>
-            <p className="text-sm text-gray-900 mt-1">{profile.email}</p>
+            <span className="text-xs font-semibold text-white/50 uppercase tracking-wide">Email</span>
+            <p className="text-sm text-white mt-1">{profile.email}</p>
           </div>
 
-          <form onSubmit={handleUpdateName}>
+          <form onSubmit={handleUpdateProfile}>
             <label className="block mb-4">
-              <span className="text-xs font-semibold text-gray-500 uppercase tracking-wide">Display Name</span>
+              <span className="text-xs font-semibold text-white/50 uppercase tracking-wide">Display Name</span>
               <input
                 type="text"
                 value={displayName}
                 onChange={(e) => setDisplayName(e.target.value)}
                 required
-                className="mt-1 block w-full border border-gray-300 rounded px-3 py-2 text-sm"
+                className="mt-1 block w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/40"
               />
             </label>
-            <button
-              type="submit"
-              disabled={saving}
-              className="w-full bg-slate-600 text-white text-sm font-medium px-4 py-3 rounded hover:bg-slate-500 transition-colors duration-150 disabled:opacity-50"
-            >
+            <label className="block mb-4">
+              <span className="text-xs font-semibold text-white/50 uppercase tracking-wide">
+                Daily completion goal
+              </span>
+              <div className="flex items-center gap-3 mt-1">
+                <input
+                  type="range"
+                  min="10"
+                  max="100"
+                  step="10"
+                  value={dailyGoal}
+                  onChange={(e) => setDailyGoal(parseInt(e.target.value, 10))}
+                  className="flex-1"
+                />
+                <span className="text-sm text-white font-medium w-12 text-right">{dailyGoal}%</span>
+              </div>
+              <p className="text-xs text-white/30 mt-1">
+                Meet this daily to keep your streak going
+              </p>
+            </label>
+            <Button type="submit" disabled={saving} className="w-full py-3">
               {saving ? "Saving..." : "Save"}
-            </button>
+            </Button>
           </form>
-        </div>
+        </Card>
 
-        <button
-          onClick={handleSignOut}
-          className="w-full border border-gray-300 bg-white text-gray-600 text-sm font-medium px-4 py-3 rounded hover:bg-gray-200 transition-colors duration-150"
-        >
-          Sign out
-        </button>
+        <Card className="mb-6">
+          <p className="text-xs font-semibold text-white/50 uppercase tracking-wide mb-3">Streak</p>
+          <div className="flex gap-6">
+            <div>
+              <p className="text-2xl font-bold text-white">{profile.currentStreak}</p>
+              <p className="text-xs text-white/40">Current</p>
+            </div>
+            <div>
+              <p className="text-2xl font-bold text-white">{profile.longestStreak}</p>
+              <p className="text-xs text-white/40">Longest</p>
+            </div>
+          </div>
+        </Card>
       </div>
     </Layout>
   );

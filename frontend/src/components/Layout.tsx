@@ -9,43 +9,74 @@ function handleSignOut() {
   window.location.href = "/login";
 }
 
+const NAV_ITEMS = [
+  { href: "/", label: "Dashboard" },
+  { href: "/tasks", label: "Tasks" },
+  { href: "/reminders", label: "Reminders" },
+  { href: "/calendar", label: "Calendar" },
+  { href: "/profile", label: "Profile" },
+];
+
 export default function Layout({ children }: { children: ReactNode }) {
   const displayName = localStorage.getItem("displayName");
   const profilePicture = localStorage.getItem("profilePicture");
   const pictureUrl = profilePicture ? `${BASE_URL}${profilePicture}` : null;
+  const path = window.location.pathname;
 
   return (
-    <div className="min-h-screen bg-ocean flex flex-col p-8">
-      <div className="w-full flex justify-end items-center gap-3 mb-4">
-        {pictureUrl ? (
-          <a href="/profile">
-            <img
-              src={pictureUrl}
-              alt="Profile"
-              className="w-8 h-8 rounded-full object-cover border border-white/30"
-            />
-          </a>
-        ) : displayName ? (
-          <a
-            href="/profile"
-            className="w-8 h-8 rounded-full bg-white/15 flex items-center justify-center text-white/70 text-sm font-bold"
+    <div className="min-h-screen bg-ocean flex">
+      <nav className="w-52 shrink-0 glass flex flex-col p-4 m-4 mr-0 rounded-xl">
+        <a href="/" className="text-lg font-bold text-white mb-6 px-2">Orbit</a>
+        <div className="flex flex-col gap-1">
+          {NAV_ITEMS.map((item) => (
+            <a
+              key={item.href}
+              href={item.href}
+              className={`text-sm px-3 py-2 rounded-lg transition-colors duration-150 ${
+                path === item.href
+                  ? "bg-white/20 text-white font-medium"
+                  : "text-white/60 hover:bg-white/10 hover:text-white"
+              }`}
+            >
+              {item.label}
+            </a>
+          ))}
+        </div>
+        <div className="mt-auto pt-4 border-t border-white/10">
+          <div className="flex items-center gap-2 px-2 mb-3">
+            {pictureUrl ? (
+              <a href="/profile">
+                <img
+                  src={pictureUrl}
+                  alt="Profile"
+                  className="w-7 h-7 rounded-full object-cover border border-white/30"
+                />
+              </a>
+            ) : displayName ? (
+              <a
+                href="/profile"
+                className="w-7 h-7 rounded-full bg-white/15 flex items-center justify-center text-white/60 text-xs font-bold"
+              >
+                {displayName.charAt(0).toUpperCase()}
+              </a>
+            ) : null}
+            {displayName && (
+              <a href="/profile" className="text-xs text-white/50 hover:text-white truncate">
+                {displayName}
+              </a>
+            )}
+          </div>
+          <button
+            onClick={handleSignOut}
+            className="w-full text-left text-sm text-white/50 px-3 py-2 rounded-lg hover:bg-white/10 hover:text-white transition-colors duration-150"
           >
-            {displayName.charAt(0).toUpperCase()}
-          </a>
-        ) : null}
-        {displayName && (
-          <a href="/profile" className="text-sm text-white/70 hover:text-white">
-            {displayName}
-          </a>
-        )}
-        <button
-          onClick={handleSignOut}
-          className="text-sm font-medium text-white/70 border border-white/20 bg-white/10 px-4 py-2 rounded-lg hover:bg-white/20 hover:text-white transition-colors duration-150"
-        >
-          Sign out
-        </button>
+            Sign out
+          </button>
+        </div>
+      </nav>
+      <div className="flex-1 flex flex-col p-8">
+        {children}
       </div>
-      {children}
     </div>
   );
 }

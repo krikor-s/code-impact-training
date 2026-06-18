@@ -6,6 +6,14 @@ import Card from "../components/Card";
 import Button from "../components/Button";
 
 type Weather = { temperature: number; condition: string };
+type Badge = { name: string; tier: string; milestone: number };
+type Streak = {
+  current: number;
+  longest: number;
+  dailyGoal: number;
+  badges: Badge[];
+  nextBadge: Badge | null;
+};
 type BriefingState =
   | { status: "idle" }
   | { status: "loading" }
@@ -148,6 +156,7 @@ export default function DashboardPage() {
   const [tasks, setTasks] = useState<Task[]>([]);
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [weather, setWeather] = useState<Weather | null>(null);
+  const [streak, setStreak] = useState<Streak | null>(null);
   const [loading, setLoading] = useState(true);
   const [briefing, setBriefing] = useState<BriefingState>({ status: "idle" });
   const [showWelcome, setShowWelcome] = useState(() => {
@@ -176,9 +185,10 @@ export default function DashboardPage() {
         apiFetch("/api/v1/reminders"),
       ]);
       if (dashRes.ok) {
-        const d = (await dashRes.json()) as { data: { events: Event[]; weather: Weather | null } };
+        const d = (await dashRes.json()) as { data: { events: Event[]; weather: Weather | null; streak: Streak } };
         setEvents(d.data.events);
         setWeather(d.data.weather);
+        setStreak(d.data.streak);
       }
       if (taskRes.ok) {
         const d = (await taskRes.json()) as { data: Task[] };
@@ -279,10 +289,30 @@ export default function DashboardPage() {
   return (
     <Layout>
       <div className="max-w-4xl mx-auto">
-        <div className="mb-8">
-          <h1 className="text-3xl font-bold text-white">Hey, {displayName}</h1>
-          <p className="text-white/50 mt-1">{todayLabel}</p>
+        <div className="mb-8 flex items-start justify-between gap-4">
+          <div>
+            <h1 className="text-3xl font-bold text-white">Hey, {displayName}</h1>
+            <p className="text-white/50 mt-1">{todayLabel}</p>
+          </div>
+          <Button
+            onClick={() => void handleGetBriefing()}
+            disabled={briefing.status === "loading"}
+          >
+            {briefing.status === "loading" ? "Getting briefing…" : "Get AI Briefing"}
+          </Button>
         </div>
+
+        {briefing.status === "done" && (
+          <Card className="mb-8">
+            <p className="text-xs font-semibold text-white/40 uppercase tracking-wide mb-2">AI Briefing</p>
+            <p className="text-sm text-white/80 leading-relaxed">{briefing.text}</p>
+          </Card>
+        )}
+        {briefing.status === "error" && (
+          <Card className="mb-8">
+            <p className="text-sm text-red-300">{briefing.message}</p>
+          </Card>
+        )}
 
         <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
           {/* Weather tile */}
@@ -309,19 +339,33 @@ export default function DashboardPage() {
             </div>
           </Card>
 
-          {/* Briefing tile */}
+          {/* Streak tile */}
           <Card className="flex flex-col items-center justify-center py-6">
-            {briefing.status === "done" ? (
-              <p className="text-sm text-white/80 leading-relaxed text-center">{briefing.text}</p>
-            ) : briefing.status === "error" ? (
-              <p className="text-sm text-red-300 text-center">{briefing.message}</p>
+            {streak ? (
+              <>
+                <p className="text-3xl font-bold text-white">{streak.current}</p>
+                <p className="text-sm text-white/50 mt-1">Day streak</p>
+                {streak.badges.length > 0 && (
+                  <div className="flex gap-1.5 mt-2">
+                    {streak.badges.map((b) => (
+                      <span
+                        key={b.tier}
+                        className="text-xs bg-white/15 text-white/70 px-2 py-0.5 rounded-full"
+                        title={`${b.name} — ${b.milestone} day streak`}
+                      >
+                        {b.name}
+                      </span>
+                    ))}
+                  </div>
+                )}
+                {streak.nextBadge && (
+                  <p className="text-xs text-white/30 mt-1">
+                    {streak.nextBadge.milestone - streak.longest} days to {streak.nextBadge.name}
+                  </p>
+                )}
+              </>
             ) : (
-              <Button
-                onClick={() => void handleGetBriefing()}
-                disabled={briefing.status === "loading"}
-              >
-                {briefing.status === "loading" ? "Loading…" : "Get AI Briefing"}
-              </Button>
+              <p className="text-sm text-white/30">Loading…</p>
             )}
           </Card>
         </div>
@@ -334,7 +378,7 @@ export default function DashboardPage() {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wide">Tasks</h2>
-                <a href="/tasks" className="text-xs text-white/30 hover:text-white/60">View all</a>
+                <a href="/tasks" className="text-xs text-white/30 hover:text-white/60">View tasks</a>
               </div>
               {dueTasks.length === 0 ? (
                 <p className="text-xs text-white/30 italic">No tasks due today</p>
@@ -351,7 +395,7 @@ export default function DashboardPage() {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wide">Reminders</h2>
-                <a href="/reminders" className="text-xs text-white/30 hover:text-white/60">View all</a>
+                <a href="/reminders" className="text-xs text-white/30 hover:text-white/60">View reminders</a>
               </div>
               {todayReminders.length === 0 ? (
                 <p className="text-xs text-white/30 italic">No reminders today</p>
@@ -368,7 +412,7 @@ export default function DashboardPage() {
             <div>
               <div className="flex items-center justify-between mb-3">
                 <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wide">Today&apos;s Events</h2>
-                <a href="/calendar" className="text-xs text-white/30 hover:text-white/60">View all</a>
+                <a href="/calendar" className="text-xs text-white/30 hover:text-white/60">View calendar</a>
               </div>
               {todayEvents.length === 0 ? (
                 <p className="text-xs text-white/30 italic">No events today</p>

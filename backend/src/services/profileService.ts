@@ -5,6 +5,9 @@ const profileSelect = {
   email: true,
   displayName: true,
   profilePicture: true,
+  dailyGoal: true,
+  currentStreak: true,
+  longestStreak: true,
   createdAt: true,
   updatedAt: true,
 };
@@ -20,7 +23,7 @@ export async function getProfile(userId: string) {
 
 export async function updateProfile(
   userId: string,
-  fields: { displayName?: string; profilePicture?: string }
+  fields: { displayName?: string; profilePicture?: string; dailyGoal?: number }
 ) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new Error("NOT_FOUND");

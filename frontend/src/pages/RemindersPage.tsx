@@ -5,6 +5,15 @@ import Layout from "../components/Layout";
 import Card from "../components/Card";
 import Button from "../components/Button";
 
+const REPEAT_LABELS: Record<RepeatFrequency, string> = {
+  NONE: "One-time",
+  DAILY: "Daily",
+  WEEKLY: "Weekly",
+  MONTHLY: "Monthly",
+};
+
+const inputClass = "mt-1 block w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/40";
+
 function ReminderCard({
   reminder,
   onRefresh,
@@ -14,17 +23,10 @@ function ReminderCard({
   onRefresh: () => Promise<void>;
   onDeleted: (reminder: Reminder) => void;
 }) {
-  const [editing, setEditing] = useState(false);
+  const [open, setOpen] = useState(false);
   const [editTitle, setEditTitle] = useState(reminder.title);
   const [editScheduledAt, setEditScheduledAt] = useState(reminder.scheduledAt.slice(0, 16));
-  const [editRepeatFrequency, setEditRepeatFrequency] = useState<RepeatFrequency>(reminder.repeatFrequency);
-
-  function openEdit() {
-    setEditTitle(reminder.title);
-    setEditScheduledAt(reminder.scheduledAt.slice(0, 16));
-    setEditRepeatFrequency(reminder.repeatFrequency);
-    setEditing(true);
-  }
+  const [editRepeat, setEditRepeat] = useState<RepeatFrequency>(reminder.repeatFrequency);
 
   async function handleComplete() {
     const res = await apiFetch(`/api/v1/reminders/${reminder.id}/complete`, { method: "PATCH" });
@@ -33,43 +35,62 @@ function ReminderCard({
 
   async function handleDelete() {
     const res = await apiFetch(`/api/v1/reminders/${reminder.id}`, { method: "DELETE" });
-    if (res.ok) {
-      onDeleted(reminder);
-      await onRefresh();
-    }
+    if (res.ok) { onDeleted(reminder); await onRefresh(); }
   }
 
-  async function handleEdit(e: React.FormEvent) {
-    e.preventDefault();
+  async function handleSave() {
     const res = await apiFetch(`/api/v1/reminders/${reminder.id}`, {
       method: "PATCH",
-      body: JSON.stringify({
-        title: editTitle,
-        scheduledAt: editScheduledAt,
-        repeatFrequency: editRepeatFrequency,
-      }),
+      body: JSON.stringify({ title: editTitle, scheduledAt: editScheduledAt, repeatFrequency: editRepeat }),
     });
-    if (res.ok) {
-      setEditing(false);
-      await onRefresh();
-    }
+    if (res.ok) { setOpen(false); await onRefresh(); }
   }
 
-  if (editing) {
-    return (
-      <Card className="mb-2">
-        <form onSubmit={handleEdit}>
+  function handleOpen() {
+    setEditTitle(reminder.title);
+    setEditScheduledAt(reminder.scheduledAt.slice(0, 16));
+    setEditRepeat(reminder.repeatFrequency);
+    setOpen(true);
+  }
+
+  return (
+    <Card className="mb-2">
+      <div className="flex items-start gap-3">
+        {reminder.status === "UPCOMING" && (
+          <button
+            onClick={handleComplete}
+            className="mt-0.5 w-4 h-4 rounded border border-white/30 shrink-0 hover:bg-white/20 transition-colors"
+            aria-label="Complete reminder"
+          />
+        )}
+        <div className="flex-1 min-w-0 cursor-pointer" onClick={() => (open ? setOpen(false) : handleOpen())}>
+          <div className="flex items-center gap-2">
+            <p className="text-white font-medium text-sm truncate">{reminder.title}</p>
+            <span className="text-[10px] bg-white/10 text-white/50 px-1.5 py-0.5 rounded shrink-0">
+              {REPEAT_LABELS[reminder.repeatFrequency]}
+            </span>
+          </div>
+          <p className="text-xs text-white/40 mt-0.5">
+            {new Date(reminder.scheduledAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
+          </p>
+        </div>
+        {reminder.status === "UPCOMING" && (
+          <button onClick={handleDelete} title="Delete" className="text-red-400 hover:text-red-300 px-1 py-0.5 rounded hover:bg-white/10 transition-colors duration-150 text-sm leading-none shrink-0">✕</button>
+        )}
+      </div>
+      {open && (
+        <div className="mt-3 pt-3 border-t border-white/10">
           <label className="block mb-2">
-            <span className="text-xs font-medium text-white/50">Title</span>
-            <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} required autoFocus className="mt-1 block w-full bg-white/10 border border-white/20 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:border-white/40" />
+            <span className="text-xs text-white/50">Title</span>
+            <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className={inputClass} />
           </label>
           <label className="block mb-2">
-            <span className="text-xs font-medium text-white/50">Scheduled at</span>
-            <input type="datetime-local" value={editScheduledAt} onChange={(e) => setEditScheduledAt(e.target.value)} required className="mt-1 block w-full bg-white/10 border border-white/20 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:border-white/40" />
+            <span className="text-xs text-white/50">Scheduled at</span>
+            <input type="datetime-local" value={editScheduledAt} onChange={(e) => setEditScheduledAt(e.target.value)} className={inputClass} />
           </label>
           <label className="block mb-3">
-            <span className="text-xs font-medium text-white/50">Repeat</span>
-            <select value={editRepeatFrequency} onChange={(e) => setEditRepeatFrequency(e.target.value as RepeatFrequency)} className="mt-1 block w-full bg-white/10 border border-white/20 rounded-lg px-2 py-1.5 text-sm text-white focus:outline-none focus:border-white/40">
+            <span className="text-xs text-white/50">Repeat</span>
+            <select value={editRepeat} onChange={(e) => setEditRepeat(e.target.value as RepeatFrequency)} className={inputClass}>
               <option value="NONE">None</option>
               <option value="DAILY">Daily</option>
               <option value="WEEKLY">Weekly</option>
@@ -77,67 +98,85 @@ function ReminderCard({
             </select>
           </label>
           <div className="flex gap-2">
-            <Button type="submit" className="flex-1 py-1.5 text-xs">Save</Button>
-            <Button variant="secondary" type="button" onClick={() => setEditing(false)} className="flex-1 py-1.5 text-xs">Cancel</Button>
+            <Button onClick={handleSave} className="text-xs px-3 py-1">Save</Button>
+            <Button variant="secondary" onClick={() => setOpen(false)} className="text-xs px-3 py-1">Cancel</Button>
           </div>
-        </form>
-      </Card>
-    );
-  }
-
-  return (
-    <Card className="mb-2">
-      <p className="text-white font-medium text-sm truncate">{reminder.title}</p>
-      <p className="text-xs text-white/40 mt-0.5">
-        {new Date(reminder.scheduledAt).toLocaleString([], { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })}
-      </p>
-      {reminder.repeatFrequency !== "NONE" && (
-        <p className="text-xs text-white/40 mt-0.5 capitalize">{reminder.repeatFrequency.toLowerCase()}</p>
-      )}
-      {reminder.status === "UPCOMING" && (
-        <div className="flex gap-1 mt-2">
-          <button onClick={handleComplete} title="Mark complete" className="text-emerald-400 hover:text-emerald-300 px-1.5 py-1 rounded hover:bg-white/10 transition-colors duration-150 text-sm leading-none">✓</button>
-          <button onClick={handleDelete} title="Delete" className="text-red-400 hover:text-red-300 px-1.5 py-1 rounded hover:bg-white/10 transition-colors duration-150 text-sm leading-none">✕</button>
-          <button onClick={openEdit} title="Edit" className="text-white/40 hover:text-white px-1.5 py-1 rounded hover:bg-white/10 transition-colors duration-150 text-sm leading-none tracking-tighter">···</button>
         </div>
       )}
     </Card>
   );
 }
 
-function Column({
-  title,
-  reminders,
-  onRefresh,
-  onDeleted,
-}: {
-  title: string;
-  reminders: Reminder[];
-  onRefresh: () => Promise<void>;
-  onDeleted: (reminder: Reminder) => void;
-}) {
+
+function CreateCard({ onRefresh }: { onRefresh: () => Promise<void> }) {
+  const [open, setOpen] = useState(false);
+  const [title, setTitle] = useState("");
+  const [scheduledAt, setScheduledAt] = useState("");
+  const [repeatFrequency, setRepeatFrequency] = useState<RepeatFrequency>("NONE");
+  const [error, setError] = useState<string | null>(null);
+
+  async function handleCreate() {
+    setError(null);
+    if (!title || !scheduledAt) { setError("Title and time are required"); return; }
+    const res = await apiFetch("/api/v1/reminders", {
+      method: "POST",
+      body: JSON.stringify({ title, scheduledAt, repeatFrequency }),
+    });
+    if (!res.ok) {
+      const data = (await res.json()) as { error?: string };
+      setError(data.error ?? "Failed to create reminder");
+      return;
+    }
+    setTitle("");
+    setScheduledAt("");
+    setRepeatFrequency("NONE");
+    setOpen(false);
+    await onRefresh();
+  }
+
+  if (!open) {
+    return (
+      <div onClick={() => setOpen(true)} className="cursor-pointer">
+        <Card className="mb-6 hover:bg-white/15 transition-colors">
+          <p className="text-sm text-white/40 text-center">+ New reminder</p>
+        </Card>
+      </div>
+    );
+  }
+
   return (
-    <div className="flex-1 min-w-0">
-      <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wide mb-3">{title}</h2>
-      {reminders.length === 0 ? (
-        <p className="text-xs text-white/30 italic">Nothing here.</p>
-      ) : (
-        reminders.map((r) => (
-          <ReminderCard key={r.id} reminder={r} onRefresh={onRefresh} onDeleted={onDeleted} />
-        ))
-      )}
-    </div>
+    <Card className="mb-6">
+      <p className="text-xs font-semibold text-white/50 uppercase tracking-wide mb-3">New Reminder</p>
+      {error && <p className="text-red-300 text-sm mb-3">{error}</p>}
+      <label className="block mb-2">
+        <span className="text-xs text-white/50">Title</span>
+        <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus className={inputClass} />
+      </label>
+      <label className="block mb-2">
+        <span className="text-xs text-white/50">Scheduled at</span>
+        <input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} className={inputClass} />
+      </label>
+      <label className="block mb-3">
+        <span className="text-xs text-white/50">Repeat</span>
+        <select value={repeatFrequency} onChange={(e) => setRepeatFrequency(e.target.value as RepeatFrequency)} className={inputClass}>
+          <option value="NONE">None</option>
+          <option value="DAILY">Daily</option>
+          <option value="WEEKLY">Weekly</option>
+          <option value="MONTHLY">Monthly</option>
+        </select>
+      </label>
+      <div className="flex gap-2">
+        <Button onClick={handleCreate} className="text-xs px-3 py-1.5">Save</Button>
+        <Button variant="secondary" onClick={() => setOpen(false)} className="text-xs px-3 py-1.5">Cancel</Button>
+      </div>
+    </Card>
   );
 }
 
 export default function RemindersPage() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [recentlyDeleted, setRecentlyDeleted] = useState<Reminder[]>([]);
-  const [showForm, setShowForm] = useState(false);
-  const [title, setTitle] = useState("");
-  const [scheduledAt, setScheduledAt] = useState("");
-  const [repeatFrequency, setRepeatFrequency] = useState<RepeatFrequency>("NONE");
-  const [error, setError] = useState<string | null>(null);
+  const [showCompleted, setShowCompleted] = useState(false);
 
   const remindersRef = useRef(reminders);
   const notifiedRef = useRef(new Set<string>());
@@ -193,25 +232,6 @@ export default function RemindersPage() {
     }
   }
 
-  async function handleCreate(e: React.FormEvent) {
-    e.preventDefault();
-    setError(null);
-    const res = await apiFetch("/api/v1/reminders", {
-      method: "POST",
-      body: JSON.stringify({ title, scheduledAt, repeatFrequency }),
-    });
-    const data = (await res.json()) as { error?: string };
-    if (!res.ok) {
-      setError(data.error ?? "Failed to create reminder");
-      return;
-    }
-    setTitle("");
-    setScheduledAt("");
-    setRepeatFrequency("NONE");
-    setShowForm(false);
-    await fetchReminders();
-  }
-
   const now = new Date();
   const todayEnd = new Date(now); todayEnd.setHours(23, 59, 59, 999);
   const weekEnd = new Date(now); weekEnd.setDate(weekEnd.getDate() + 7); weekEnd.setHours(23, 59, 59, 999);
@@ -224,44 +244,66 @@ export default function RemindersPage() {
 
   return (
     <Layout>
-      <div className="flex justify-between items-center mb-8">
-        <h1 className="text-2xl font-bold text-white">Reminders</h1>
-        <Button variant="secondary" onClick={() => setShowForm((v) => !v)}>
-          {showForm ? "Cancel" : "+ Add reminder"}
-        </Button>
-      </div>
+      <div className="w-full">
+        <div className="flex items-center justify-between mb-6">
+          <h1 className="text-2xl font-bold text-white">Reminders</h1>
+          {completed.length > 0 && (
+            <button
+              onClick={() => setShowCompleted((v) => !v)}
+              className="text-xs font-semibold text-white/30 uppercase tracking-wide hover:text-white/50 transition-colors duration-150"
+            >
+              Completed ({completed.length}) {showCompleted ? "▾" : "▸"}
+            </button>
+          )}
+        </div>
 
-      {showForm && (
-        <Card className="w-full max-w-sm mb-8">
-          <form onSubmit={handleCreate}>
-            {error && <p className="text-red-300 text-sm mb-3">{error}</p>}
-            <label className="block mb-3">
-              <span className="text-sm font-medium text-white/70">Title</span>
-              <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus className="mt-1 block w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/40" />
-            </label>
-            <label className="block mb-3">
-              <span className="text-sm font-medium text-white/70">Scheduled at</span>
-              <input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} required className="mt-1 block w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/40" />
-            </label>
-            <label className="block mb-4">
-              <span className="text-sm font-medium text-white/70">Repeat</span>
-              <select value={repeatFrequency} onChange={(e) => setRepeatFrequency(e.target.value as RepeatFrequency)} className="mt-1 block w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/40">
-                <option value="NONE">None</option>
-                <option value="DAILY">Daily</option>
-                <option value="WEEKLY">Weekly</option>
-                <option value="MONTHLY">Monthly</option>
-              </select>
-            </label>
-            <Button type="submit" className="w-full py-2.5">Save reminder</Button>
-          </form>
-        </Card>
-      )}
+        <CreateCard onRefresh={fetchReminders} />
 
-      <div className="flex gap-6">
-        <Column title="Today" reminders={todayReminders} onRefresh={fetchReminders} onDeleted={handleDeleted} />
-        <Column title="This Week" reminders={thisWeekReminders} onRefresh={fetchReminders} onDeleted={handleDeleted} />
-        <Column title="This Month" reminders={laterReminders} onRefresh={fetchReminders} onDeleted={handleDeleted} />
-        <Column title="Completed" reminders={completed} onRefresh={fetchReminders} onDeleted={handleDeleted} />
+        <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+          <div>
+            <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wide mb-3">Today</h2>
+            {todayReminders.length === 0 ? (
+              <p className="text-xs text-white/30 italic">Nothing today.</p>
+            ) : todayReminders.map((r) => (
+              <ReminderCard key={r.id} reminder={r} onRefresh={fetchReminders} onDeleted={handleDeleted} />
+            ))}
+          </div>
+          <div>
+            <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wide mb-3">This Week</h2>
+            {thisWeekReminders.length === 0 ? (
+              <p className="text-xs text-white/30 italic">Nothing this week.</p>
+            ) : thisWeekReminders.map((r) => (
+              <ReminderCard key={r.id} reminder={r} onRefresh={fetchReminders} onDeleted={handleDeleted} />
+            ))}
+          </div>
+          <div>
+            <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wide mb-3">Later</h2>
+            {laterReminders.length === 0 ? (
+              <p className="text-xs text-white/30 italic">Nothing scheduled.</p>
+            ) : laterReminders.map((r) => (
+              <ReminderCard key={r.id} reminder={r} onRefresh={fetchReminders} onDeleted={handleDeleted} />
+            ))}
+          </div>
+        </div>
+
+        {showCompleted && completed.length > 0 && (
+          <div className="mt-8">
+            <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wide mb-3">Completed</h2>
+            <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
+              {completed.map((r) => (
+                <Card key={r.id} className="opacity-60">
+                  <div className="flex items-center gap-2">
+                    <span className="text-emerald-400 text-sm">✓</span>
+                    <p className="text-white/50 text-sm truncate line-through">{r.title}</p>
+                    <span className="text-[10px] bg-white/10 text-white/30 px-1.5 py-0.5 rounded shrink-0 ml-auto">
+                      {REPEAT_LABELS[r.repeatFrequency]}
+                    </span>
+                  </div>
+                </Card>
+              ))}
+            </div>
+          </div>
+        )}
       </div>
 
       {recentlyDeleted.length > 0 && (

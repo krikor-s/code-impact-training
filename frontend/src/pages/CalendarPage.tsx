@@ -307,8 +307,61 @@ function ReminderFormModal({
   );
 }
 
+function TaskEditModal({
+  task,
+  onSave,
+  onDelete,
+  onClose,
+}: {
+  task: Task;
+  onSave: (data: { title: string; description?: string | null; dueDate?: string | null }) => Promise<void>;
+  onDelete: () => Promise<void>;
+  onClose: () => void;
+}) {
+  const [title, setTitle] = useState(task.title);
+  const [description, setDescription] = useState(task.description ?? "");
+  const [dueDate, setDueDate] = useState(task.dueDate ? task.dueDate.slice(0, 10) : "");
+
+  async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
+    e.preventDefault();
+    await onSave({ title, description: description || null, dueDate: dueDate || null });
+  }
+
+  const inputClass = "bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/40";
+
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center" onClick={onClose}>
+      <div className="absolute inset-0 bg-black/40 backdrop-blur-sm" />
+      <div className="glass-strong relative rounded-2xl w-full max-w-sm mx-4 p-6" onClick={(e) => e.stopPropagation()}>
+        <h2 className="text-base font-semibold text-white mb-4">Edit Task</h2>
+        <form onSubmit={handleSubmit} className="flex flex-col gap-3">
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-white/50">Title</span>
+            <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus className={inputClass} />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-white/50">Description <span className="text-white/30">(optional)</span></span>
+            <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} className={inputClass} />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs font-medium text-white/50">Due date</span>
+            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={inputClass} />
+          </label>
+          <div className="flex gap-2 mt-1">
+            <Button type="submit" className="flex-1 py-2">Save</Button>
+            <Button variant="secondary" type="button" onClick={onClose} className="flex-1 py-2">Cancel</Button>
+          </div>
+          <button type="button" onClick={onDelete} className="w-full text-red-300 border border-red-400/30 rounded-lg px-3 py-2 text-sm hover:bg-red-400/10 transition-colors duration-150">
+            Delete task
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}
+
 function TimeGrid({
-  days, events, tasks, reminders, onSlotClick, onEventClick, onReminderClick,
+  days, events, tasks, reminders, onSlotClick, onEventClick, onReminderClick, onTaskClick,
 }: {
   days: Date[];
   events: Event[];
@@ -317,6 +370,7 @@ function TimeGrid({
   onSlotClick: (date: Date) => void;
   onEventClick: (event: Event) => void;
   onReminderClick: (reminder: Reminder) => void;
+  onTaskClick: (task: Task) => void;
 }) {
   const scrollRef = useRef<HTMLDivElement>(null);
   useEffect(() => { if (scrollRef.current) scrollRef.current.scrollTop = 7 * HOUR_HEIGHT; }, []);
@@ -349,7 +403,7 @@ function TimeGrid({
           return (
             <div key={i} className="flex-1 border-l border-white/10 py-0.5 px-1 min-h-5">
               {dayTasks.map((task) => (
-                <div key={task.id} className="text-xs bg-amber-500/80 text-white rounded px-1 py-0.5 truncate mb-0.5">{task.title}</div>
+                <div key={task.id} data-event onClick={() => onTaskClick(task)} className="text-xs bg-amber-500/80 text-white rounded px-1 py-0.5 truncate mb-0.5 cursor-pointer hover:bg-amber-400/80 transition-colors duration-150">{task.title}</div>
               ))}
             </div>
           );
@@ -409,7 +463,7 @@ function TimeGrid({
                     key={event.id}
                     data-event
                     onClick={() => onEventClick(event)}
-                    className="absolute z-10 rounded px-1.5 py-0.5 bg-white/20 text-white text-xs overflow-hidden cursor-pointer hover:bg-white/30 transition-colors duration-150"
+                    className="absolute z-10 rounded px-1.5 py-0.5 bg-cyan-500/80 text-white text-xs overflow-hidden cursor-pointer hover:bg-cyan-400/80 transition-colors duration-150"
                     style={{ top, height, left: `${left}%`, width: `${width}%` }}
                   >
                     <p className="font-medium truncate leading-tight">{event.title}</p>
@@ -426,10 +480,10 @@ function TimeGrid({
 }
 
 function MonthView({
-  cursor, today, events, tasks, reminders, onDayClick, onEventClick, onReminderClick,
+  cursor, today, events, tasks, reminders, onDayClick, onEventClick, onReminderClick, onTaskClick,
 }: {
   cursor: Date; today: Date; events: Event[]; tasks: Task[]; reminders: Reminder[];
-  onDayClick: (date: Date) => void; onEventClick: (event: Event) => void; onReminderClick: (reminder: Reminder) => void;
+  onDayClick: (date: Date) => void; onEventClick: (event: Event) => void; onReminderClick: (reminder: Reminder) => void; onTaskClick: (task: Task) => void;
 }) {
   const year = cursor.getFullYear();
   const month = cursor.getMonth();
@@ -455,9 +509,9 @@ function MonthView({
           const dayTasks = tasks.filter((t) => taskOnDay(t, cell));
           const dayReminders = reminders.filter((r) => reminderOnDay(r, cell));
           const allItems = [
-            ...dayEvents.map((e) => ({ type: "event" as const, id: e.id, title: e.title, event: e, reminder: undefined as Reminder | undefined })),
-            ...dayTasks.map((t) => ({ type: "task" as const, id: t.id, title: t.title, event: undefined as Event | undefined, reminder: undefined as Reminder | undefined })),
-            ...dayReminders.map((r) => ({ type: "reminder" as const, id: r.id, title: r.title, event: undefined as Event | undefined, reminder: r })),
+            ...dayEvents.map((e) => ({ type: "event" as const, id: e.id, title: e.title, event: e, reminder: undefined as Reminder | undefined, task: undefined as Task | undefined })),
+            ...dayTasks.map((t) => ({ type: "task" as const, id: t.id, title: t.title, event: undefined as Event | undefined, reminder: undefined as Reminder | undefined, task: t })),
+            ...dayReminders.map((r) => ({ type: "reminder" as const, id: r.id, title: r.title, event: undefined as Event | undefined, reminder: r, task: undefined as Task | undefined })),
           ];
           return (
             <div
@@ -474,10 +528,11 @@ function MonthView({
                     key={item.id}
                     {...(item.type === "event" ? { "data-event": true, onClick: () => onEventClick(item.event!) } : {})}
                     {...(item.type === "reminder" ? { "data-event": true, onClick: () => onReminderClick(item.reminder!) } : {})}
-                    className={`relative z-10 text-xs text-white rounded px-1.5 py-0.5 truncate transition-colors duration-150 ${
-                      item.type === "event" ? "bg-white/20 cursor-pointer hover:bg-white/30"
-                        : item.type === "task" ? "bg-amber-500/80"
-                        : "bg-violet-500/80 cursor-pointer hover:bg-violet-400/80"
+                    {...(item.type === "task" ? { "data-event": true, onClick: () => onTaskClick(item.task!) } : {})}
+                    className={`relative z-10 text-xs text-white rounded px-1.5 py-0.5 truncate transition-colors duration-150 cursor-pointer ${
+                      item.type === "event" ? "bg-cyan-500/80 hover:bg-cyan-400/80"
+                        : item.type === "task" ? "bg-amber-500/80 hover:bg-amber-400/80"
+                        : "bg-violet-500/80 hover:bg-violet-400/80"
                     }`}
                   >
                     {item.title}
@@ -502,32 +557,40 @@ export default function CalendarPage() {
   const [reminders, setReminders] = useState<Reminder[]>([]);
   const [modal, setModal] = useState<{ mode: "create" | "edit"; event?: Event; defaultStart?: Date } | null>(null);
   const [reminderModal, setReminderModal] = useState<Reminder | null>(null);
+  const [taskModal, setTaskModal] = useState<Task | null>(null);
   const [createDate, setCreateDate] = useState<Date | null>(null);
 
-  async function fetchEvents() {
-    const res = await apiFetch("/api/v1/events");
-    if (!res.ok) return;
-    const data = (await res.json()) as { data: Event[] };
-    setEvents(data.data);
-  }
-
-  async function fetchReminders() {
-    const res = await apiFetch("/api/v1/reminders");
-    if (!res.ok) return;
-    const data = (await res.json()) as { data: Reminder[] };
-    setReminders(data.data);
+  async function fetchAll() {
+    const [eventsRes, tasksRes, remindersRes] = await Promise.all([
+      apiFetch("/api/v1/events"), apiFetch("/api/v1/tasks"), apiFetch("/api/v1/reminders"),
+    ]);
+    if (eventsRes.ok) { const data = (await eventsRes.json()) as { data: Event[] }; setEvents(data.data); }
+    if (tasksRes.ok) { const data = (await tasksRes.json()) as { data: Task[] }; setTasks(data.data); }
+    if (remindersRes.ok) { const data = (await remindersRes.json()) as { data: Reminder[] }; setReminders(data.data); }
   }
 
   async function handleReminderSave(data: { title: string; scheduledAt: string; repeatFrequency: RepeatFrequency }) {
     if (!reminderModal) return;
     const res = await apiFetch(`/api/v1/reminders/${reminderModal.id}`, { method: "PATCH", body: JSON.stringify(data) });
-    if (res.ok) { setReminderModal(null); await fetchReminders(); }
+    if (res.ok) { setReminderModal(null); await fetchAll(); }
   }
 
   async function handleReminderDelete() {
     if (!reminderModal) return;
     const res = await apiFetch(`/api/v1/reminders/${reminderModal.id}`, { method: "DELETE" });
-    if (res.ok) { setReminderModal(null); await fetchReminders(); }
+    if (res.ok) { setReminderModal(null); await fetchAll(); }
+  }
+
+  async function handleTaskSave(data: { title: string; description?: string | null; dueDate?: string | null }) {
+    if (!taskModal) return;
+    const res = await apiFetch(`/api/v1/tasks/${taskModal.id}`, { method: "PATCH", body: JSON.stringify(data) });
+    if (res.ok) { setTaskModal(null); await fetchAll(); }
+  }
+
+  async function handleTaskDelete() {
+    if (!taskModal) return;
+    const res = await apiFetch(`/api/v1/tasks/${taskModal.id}`, { method: "DELETE" });
+    if (res.ok) { setTaskModal(null); await fetchAll(); }
   }
 
   useEffect(() => {
@@ -535,9 +598,9 @@ export default function CalendarPage() {
       const [eventsRes, tasksRes, remindersRes] = await Promise.all([
         apiFetch("/api/v1/events"), apiFetch("/api/v1/tasks"), apiFetch("/api/v1/reminders"),
       ]);
-      if (eventsRes.ok) { const data = (await eventsRes.json()) as { data: Event[] }; setEvents(data.data); }
-      if (tasksRes.ok) { const data = (await tasksRes.json()) as { data: Task[] }; setTasks(data.data); }
-      if (remindersRes.ok) { const data = (await remindersRes.json()) as { data: Reminder[] }; setReminders(data.data); }
+      if (eventsRes.ok) { const d = (await eventsRes.json()) as { data: Event[] }; setEvents(d.data); }
+      if (tasksRes.ok) { const d = (await tasksRes.json()) as { data: Task[] }; setTasks(d.data); }
+      if (remindersRes.ok) { const d = (await remindersRes.json()) as { data: Reminder[] }; setReminders(d.data); }
     }
     void load();
   }, []);
@@ -545,17 +608,17 @@ export default function CalendarPage() {
   async function handleSave(data: { title: string; description?: string; startAt: string; endAt: string }) {
     if (modal?.mode === "create") {
       const res = await apiFetch("/api/v1/events", { method: "POST", body: JSON.stringify(data) });
-      if (res.ok) { setModal(null); await fetchEvents(); }
+      if (res.ok) { setModal(null); await fetchAll(); }
     } else if (modal?.mode === "edit" && modal.event) {
       const res = await apiFetch(`/api/v1/events/${modal.event.id}`, { method: "PATCH", body: JSON.stringify(data) });
-      if (res.ok) { setModal(null); await fetchEvents(); }
+      if (res.ok) { setModal(null); await fetchAll(); }
     }
   }
 
   async function handleDelete() {
     if (!modal?.event) return;
     const res = await apiFetch(`/api/v1/events/${modal.event.id}`, { method: "DELETE" });
-    if (res.ok) { setModal(null); await fetchEvents(); }
+    if (res.ok) { setModal(null); await fetchAll(); }
   }
 
   function navigate(dir: -1 | 1) {
@@ -593,21 +656,17 @@ export default function CalendarPage() {
 
   async function handleCreateEvent(data: { title: string; description?: string; startAt: string; endAt: string }) {
     const res = await apiFetch("/api/v1/events", { method: "POST", body: JSON.stringify(data) });
-    if (res.ok) { setCreateDate(null); await fetchEvents(); }
+    if (res.ok) { setCreateDate(null); await fetchAll(); }
   }
 
   async function handleCreateReminder(data: { title: string; scheduledAt: string }) {
     const res = await apiFetch("/api/v1/reminders", { method: "POST", body: JSON.stringify(data) });
-    if (res.ok) { setCreateDate(null); await fetchReminders(); }
+    if (res.ok) { setCreateDate(null); await fetchAll(); }
   }
 
   async function handleCreateTask(data: { title: string; description?: string; dueDate: string }) {
     const res = await apiFetch("/api/v1/tasks", { method: "POST", body: JSON.stringify(data) });
-    if (res.ok) {
-      setCreateDate(null);
-      const tasksRes = await apiFetch("/api/v1/tasks");
-      if (tasksRes.ok) { const d = (await tasksRes.json()) as { data: Task[] }; setTasks(d.data); }
-    }
+    if (res.ok) { setCreateDate(null); await fetchAll(); }
   }
 
   return (
@@ -629,6 +688,12 @@ export default function CalendarPage() {
         </div>
       </div>
 
+      <div className="flex items-center gap-4 mb-2 text-xs">
+        <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-cyan-500/80 inline-block" />  <span className="text-white/40">Event</span></div>
+        <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-amber-500/80 inline-block" /> <span className="text-white/40">Task</span></div>
+        <div className="flex items-center gap-1.5"><span className="w-2.5 h-2.5 rounded bg-violet-500/80 inline-block" /> <span className="text-white/40">Reminder</span></div>
+      </div>
+
       <div className="flex items-center gap-3 mb-4">
         <Button variant="secondary" onClick={() => setCursor(new Date(today))} className="py-1.5 px-3">Today</Button>
         <div className="flex gap-1">
@@ -639,13 +704,13 @@ export default function CalendarPage() {
       </div>
 
       {view === "month" && (
-        <MonthView cursor={cursor} today={today} events={events} tasks={tasks} reminders={reminders} onDayClick={openCreate} onEventClick={(event) => setModal({ mode: "edit", event })} onReminderClick={setReminderModal} />
+        <MonthView cursor={cursor} today={today} events={events} tasks={tasks} reminders={reminders} onDayClick={openCreate} onEventClick={(event) => setModal({ mode: "edit", event })} onReminderClick={setReminderModal} onTaskClick={setTaskModal} />
       )}
       {view === "week" && (
-        <TimeGrid days={getWeekDays()} events={events} tasks={tasks} reminders={reminders} onSlotClick={openCreate} onEventClick={(event) => setModal({ mode: "edit", event })} onReminderClick={setReminderModal} />
+        <TimeGrid days={getWeekDays()} events={events} tasks={tasks} reminders={reminders} onSlotClick={openCreate} onEventClick={(event) => setModal({ mode: "edit", event })} onReminderClick={setReminderModal} onTaskClick={setTaskModal} />
       )}
       {view === "day" && (
-        <TimeGrid days={[cursor]} events={events} tasks={tasks} reminders={reminders} onSlotClick={openCreate} onEventClick={(event) => setModal({ mode: "edit", event })} onReminderClick={setReminderModal} />
+        <TimeGrid days={[cursor]} events={events} tasks={tasks} reminders={reminders} onSlotClick={openCreate} onEventClick={(event) => setModal({ mode: "edit", event })} onReminderClick={setReminderModal} onTaskClick={setTaskModal} />
       )}
 
       {modal && (
@@ -665,6 +730,15 @@ export default function CalendarPage() {
           onSave={handleReminderSave}
           onDelete={handleReminderDelete}
           onClose={() => setReminderModal(null)}
+        />
+      )}
+
+      {taskModal && (
+        <TaskEditModal
+          task={taskModal}
+          onSave={handleTaskSave}
+          onDelete={handleTaskDelete}
+          onClose={() => setTaskModal(null)}
         />
       )}
 

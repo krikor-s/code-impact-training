@@ -11,30 +11,36 @@ export async function generateBriefing(
   const { events, tasks, reminders, weather } = await getDashboardSummary(userId, coords);
 
   const now = new Date();
-  const today = now.toLocaleDateString([], {
+  const tz = timeContext?.timezone;
+  const dateOpts: Intl.DateTimeFormatOptions = { timeZone: tz };
+  const today = now.toLocaleDateString("en-US", {
+    ...dateOpts,
     weekday: "long",
     year: "numeric",
     month: "long",
     day: "numeric",
   });
 
-  const currentTime = timeContext?.localTime ?? now.toLocaleTimeString([], {
+  const currentTime = timeContext?.localTime ?? now.toLocaleTimeString("en-US", {
+    ...dateOpts,
     hour: "2-digit",
     minute: "2-digit",
     hour12: true,
   });
-  const tz = timeContext?.timezone ?? "unknown timezone";
+  const tzLabel = tz ?? "unknown timezone";
 
   const eventsText =
     events.length === 0
       ? "No events today."
       : events
           .map((e) => {
-            const start = new Date(e.startAt).toLocaleTimeString([], {
+            const start = new Date(e.startAt).toLocaleTimeString("en-US", {
+              ...dateOpts,
               hour: "2-digit",
               minute: "2-digit",
             });
-            const end = new Date(e.endAt).toLocaleTimeString([], {
+            const end = new Date(e.endAt).toLocaleTimeString("en-US", {
+              ...dateOpts,
               hour: "2-digit",
               minute: "2-digit",
             });
@@ -47,9 +53,11 @@ export async function generateBriefing(
       ? "No overdue or due-today tasks."
       : tasks
           .map((t) => {
-            const due = t.dueDate
-              ? ` (due ${new Date(t.dueDate).toLocaleDateString()})`
-              : "";
+            let due = "";
+            if (t.dueDate) {
+              const iso = new Date(t.dueDate).toISOString().slice(0, 10);
+              due = ` (due ${new Date(iso + "T12:00:00Z").toLocaleDateString("en-US", { ...dateOpts, month: "short", day: "numeric" })})`;
+            }
             return `- ${t.title}${due}${t.description ? `: ${t.description}` : ""}`;
           })
           .join("\n");
@@ -59,7 +67,8 @@ export async function generateBriefing(
       ? "No reminders today."
       : reminders
           .map((r) => {
-            const time = new Date(r.scheduledAt).toLocaleTimeString([], {
+            const time = new Date(r.scheduledAt).toLocaleTimeString("en-US", {
+              ...dateOpts,
               hour: "2-digit",
               minute: "2-digit",
             });
@@ -71,7 +80,7 @@ export async function generateBriefing(
     ? `Current conditions as of right now: ${weather.temperature}°F, ${weather.condition}.`
     : null;
 
-  const prompt = `Today is ${today}. The current time is ${currentTime} (${tz}).
+  const prompt = `Today is ${today}. The current time is ${currentTime} (${tzLabel}).
 ${weatherText ? `\nWEATHER:\n${weatherText}\n` : ""}
 Here is the user's schedule:
 

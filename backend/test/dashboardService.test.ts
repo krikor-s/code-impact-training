@@ -72,10 +72,10 @@ describe("getDashboardSummary", () => {
 
     const gte = eventCall.where.startAt.gte as Date;
     const lte = eventCall.where.startAt.lte as Date;
-    expect(gte.getUTCHours()).toBe(0);
-    expect(gte.getUTCMinutes()).toBe(0);
-    expect(lte.getUTCHours()).toBe(23);
-    expect(lte.getUTCMinutes()).toBe(59);
+    expect(gte.getHours()).toBe(0);
+    expect(gte.getMinutes()).toBe(0);
+    expect(lte.getHours()).toBe(23);
+    expect(lte.getMinutes()).toBe(59);
   });
 
   it("queries tasks with UPCOMING status and dueDate up to end of today", async () => {

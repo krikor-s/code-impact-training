@@ -3,6 +3,8 @@ import type { FormEvent } from "react";
 import type { Task } from "../types";
 import { apiFetch } from "../lib/api";
 import Layout from "../components/Layout";
+import Card from "../components/Card";
+import Button from "../components/Button";
 
 function TaskCard({
   task,
@@ -28,16 +30,12 @@ function TaskCard({
   }
 
   async function handleComplete() {
-    const res = await apiFetch(`/api/v1/tasks/${task.id}/complete`, {
-      method: "PATCH",
-    });
+    const res = await apiFetch(`/api/v1/tasks/${task.id}/complete`, { method: "PATCH" });
     if (res.ok) await onRefresh();
   }
 
   async function handleDelete() {
-    const res = await apiFetch(`/api/v1/tasks/${task.id}`, {
-      method: "DELETE",
-    });
+    const res = await apiFetch(`/api/v1/tasks/${task.id}`, { method: "DELETE" });
     if (res.ok) {
       onDeleted(task);
       await onRefresh();
@@ -62,101 +60,71 @@ function TaskCard({
 
   if (editing) {
     return (
-      <form
-        onSubmit={handleEdit}
-        className="bg-white rounded-lg shadow-sm border border-gray-300 p-4 mb-2"
-      >
-        <label className="block mb-2">
-          <span className="text-xs font-medium text-gray-500">Title</span>
-          <input
-            type="text"
-            value={editTitle}
-            onChange={(e) => setEditTitle(e.target.value)}
-            required
-            autoFocus
-            className="mt-1 block w-full border border-gray-300 rounded px-3 py-2 text-sm"
-          />
-        </label>
-        <label className="block mb-2">
-          <span className="text-xs font-medium text-gray-500">
-            Description <span className="text-gray-400 font-normal">(optional)</span>
-          </span>
-          <textarea
-            value={editDescription}
-            onChange={(e) => setEditDescription(e.target.value)}
-            rows={2}
-            className="mt-1 block w-full border border-gray-300 rounded px-3 py-2 text-sm resize-none"
-          />
-        </label>
-        <label className="block mb-3">
-          <span className="text-xs font-medium text-gray-500">
-            Due date <span className="text-gray-400 font-normal">(optional)</span>
-          </span>
-          <input
-            type="date"
-            value={editDueDate}
-            onChange={(e) => setEditDueDate(e.target.value)}
-            className="mt-1 block w-full border border-gray-300 rounded px-3 py-2 text-sm"
-          />
-        </label>
-        <div className="flex gap-2">
-          <button
-            type="submit"
-            className="flex-1 bg-gray-900 text-white rounded px-3 py-1.5 text-sm font-medium hover:bg-gray-700 transition-colors duration-150"
-          >
-            Save
-          </button>
-          <button
-            type="button"
-            onClick={() => setEditing(false)}
-            className="flex-1 border border-gray-300 bg-white text-gray-600 rounded px-3 py-1.5 text-sm hover:bg-gray-200 transition-colors duration-150"
-          >
-            Cancel
-          </button>
-        </div>
-      </form>
+      <Card className="mb-2">
+        <form onSubmit={handleEdit}>
+          <label className="block mb-2">
+            <span className="text-xs font-medium text-white/50">Title</span>
+            <input
+              type="text"
+              value={editTitle}
+              onChange={(e) => setEditTitle(e.target.value)}
+              required
+              autoFocus
+              className="mt-1 block w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/40"
+            />
+          </label>
+          <label className="block mb-2">
+            <span className="text-xs font-medium text-white/50">
+              Description <span className="text-white/30">(optional)</span>
+            </span>
+            <textarea
+              value={editDescription}
+              onChange={(e) => setEditDescription(e.target.value)}
+              rows={2}
+              className="mt-1 block w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white resize-none focus:outline-none focus:border-white/40"
+            />
+          </label>
+          <label className="block mb-3">
+            <span className="text-xs font-medium text-white/50">
+              Due date <span className="text-white/30">(optional)</span>
+            </span>
+            <input
+              type="date"
+              value={editDueDate}
+              onChange={(e) => setEditDueDate(e.target.value)}
+              className="mt-1 block w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/40"
+            />
+          </label>
+          <div className="flex gap-2">
+            <Button type="submit" className="flex-1 py-1.5">Save</Button>
+            <Button variant="secondary" type="button" onClick={() => setEditing(false)} className="flex-1 py-1.5">Cancel</Button>
+          </div>
+        </form>
+      </Card>
     );
   }
 
   return (
-    <div className="bg-white rounded-lg shadow-sm border border-gray-200 p-4 mb-2 flex items-start justify-between gap-3">
-      <div className="min-w-0">
-        <p className="text-gray-900 font-medium truncate">{task.title}</p>
-        {task.description && (
-          <p className="text-xs text-gray-500 mt-0.5">{task.description}</p>
-        )}
-        {task.dueDate && (
-          <p className="text-xs text-gray-400 mt-0.5">
-            Due {new Date(task.dueDate.slice(0, 10) + "T00:00:00").toLocaleDateString()}
-          </p>
-        )}
+    <Card className="mb-2">
+      <div className="flex items-start justify-between gap-3">
+        <div className="min-w-0">
+          <p className="text-white font-medium truncate">{task.title}</p>
+          {task.description && <p className="text-xs text-white/50 mt-0.5">{task.description}</p>}
+          {task.dueDate && (
+            <p className="text-xs text-white/40 mt-0.5">
+              Due {new Date(task.dueDate.slice(0, 10) + "T00:00:00").toLocaleDateString()}
+            </p>
+          )}
+        </div>
+        <div className="flex items-center gap-1 shrink-0">
+          {task.status === "UPCOMING" && (
+            <button onClick={handleComplete} title="Mark complete" className="text-emerald-400 hover:text-emerald-300 px-1.5 py-1 rounded hover:bg-white/10 transition-colors duration-150 text-base leading-none">✓</button>
+          )}
+          <button onClick={handleDelete} title="Delete" className="text-red-400 hover:text-red-300 px-1.5 py-1 rounded hover:bg-white/10 transition-colors duration-150 text-base leading-none">✕</button>
+          <button onClick={openEdit} title="Edit" className="text-white/40 hover:text-white px-1.5 py-1 rounded hover:bg-white/10 transition-colors duration-150 text-base leading-none tracking-tighter">···</button>
+        </div>
       </div>
-      <div className="flex items-center gap-1 shrink-0">
-        {task.status === "UPCOMING" && (
-          <button
-            onClick={handleComplete}
-            title="Mark complete"
-            className="text-green-600 hover:text-green-800 px-1.5 py-1 rounded hover:bg-green-50 transition-colors duration-150 text-base leading-none"
-          >
-            ✓
-          </button>
-        )}
-        <button
-          onClick={handleDelete}
-          title="Delete"
-          className="text-red-400 hover:text-red-600 px-1.5 py-1 rounded hover:bg-red-50 transition-colors duration-150 text-base leading-none"
-        >
-          ✕
-        </button>
-        <button
-          onClick={openEdit}
-          title="Edit"
-          className="text-gray-400 hover:text-gray-700 px-1.5 py-1 rounded hover:bg-gray-100 transition-colors duration-150 text-base leading-none tracking-tighter"
-        >
-          ···
-        </button>
-      </div>
-    </div>
+    </Card>
   );
 }
 
@@ -176,11 +144,9 @@ function Section({
   if (tasks.length === 0 && !alwaysShow) return null;
   return (
     <div className="mb-8">
-      <h2 className="text-sm font-semibold text-gray-500 uppercase tracking-wide mb-3">
-        {title}
-      </h2>
+      <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wide mb-3">{title}</h2>
       {tasks.length === 0 ? (
-        <p className="text-xs text-gray-300 italic">Nothing here yet.</p>
+        <p className="text-xs text-white/30 italic">Nothing here yet.</p>
       ) : (
         tasks.map((task) => (
           <TaskCard key={task.id} task={task} onRefresh={onRefresh} onDeleted={onDeleted} />
@@ -260,60 +226,48 @@ export default function TasksPage() {
   const upcoming = tasks.filter(
     (t) => t.status === "UPCOMING" && t.dueDate && new Date(t.dueDate.slice(0, 10) + "T00:00:00") >= today
   );
-  const backlog = tasks.filter(
-    (t) => t.status === "UPCOMING" && !t.dueDate
-  );
+  const backlog = tasks.filter((t) => t.status === "UPCOMING" && !t.dueDate);
   const completed = tasks.filter((t) => t.status === "COMPLETED");
 
   return (
     <Layout>
       <div className="flex flex-col items-center">
         <div className="w-full max-w-md flex justify-between items-center mb-8">
-          <h1 className="text-2xl font-bold text-gray-900">Tasks</h1>
-          <button
-            onClick={() => setShowForm((v) => !v)}
-            className="text-sm font-medium text-gray-600 border border-gray-300 bg-white px-4 py-2 rounded hover:bg-gray-200 transition-colors duration-150"
-          >
+          <h1 className="text-2xl font-bold text-white">Tasks</h1>
+          <Button variant="secondary" onClick={() => setShowForm((v) => !v)}>
             {showForm ? "Cancel" : "+ Add task"}
-          </button>
+          </Button>
         </div>
 
         {showForm && (
-          <form
-            onSubmit={handleCreate}
-            className="bg-white rounded-lg shadow-sm border border-gray-200 p-5 w-full max-w-md mb-8"
-          >
-            {error && <p className="text-red-600 text-sm mb-3">{error}</p>}
-            <label className="block mb-3">
-              <span className="text-sm font-medium text-gray-700">Title</span>
-              <input
-                type="text"
-                value={title}
-                onChange={(e) => setTitle(e.target.value)}
-                required
-                autoFocus
-                className="mt-1 block w-full border border-gray-300 rounded px-3 py-2 text-sm"
-              />
-            </label>
-            <label className="block mb-4">
-              <span className="text-sm font-medium text-gray-700">
-                Due date{" "}
-                <span className="text-gray-400 font-normal">(optional)</span>
-              </span>
-              <input
-                type="date"
-                value={dueDate}
-                onChange={(e) => setDueDate(e.target.value)}
-                className="mt-1 block w-full border border-gray-300 rounded px-3 py-2 text-sm"
-              />
-            </label>
-            <button
-              type="submit"
-              className="w-full bg-gray-900 text-white rounded px-4 py-2 text-sm font-medium hover:bg-gray-700 transition-colors duration-150"
-            >
-              Save task
-            </button>
-          </form>
+          <Card className="w-full max-w-md mb-8">
+            <form onSubmit={handleCreate}>
+              {error && <p className="text-red-300 text-sm mb-3">{error}</p>}
+              <label className="block mb-3">
+                <span className="text-sm font-medium text-white/70">Title</span>
+                <input
+                  type="text"
+                  value={title}
+                  onChange={(e) => setTitle(e.target.value)}
+                  required
+                  autoFocus
+                  className="mt-1 block w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/40"
+                />
+              </label>
+              <label className="block mb-4">
+                <span className="text-sm font-medium text-white/70">
+                  Due date <span className="text-white/30">(optional)</span>
+                </span>
+                <input
+                  type="date"
+                  value={dueDate}
+                  onChange={(e) => setDueDate(e.target.value)}
+                  className="mt-1 block w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/40"
+                />
+              </label>
+              <Button type="submit" className="w-full py-2.5">Save task</Button>
+            </form>
+          </Card>
         )}
 
         <div className="w-full max-w-md">
@@ -322,33 +276,21 @@ export default function TasksPage() {
           <Section title="Backlog" tasks={backlog} onRefresh={fetchTasks} onDeleted={handleDeleted} />
           <Section title="Completed" tasks={completed} onRefresh={fetchTasks} onDeleted={handleDeleted} alwaysShow />
           {tasks.length === 0 && !showForm && (
-            <p className="text-sm text-gray-400 text-center">No tasks yet.</p>
+            <p className="text-sm text-white/40 text-center">No tasks yet.</p>
           )}
         </div>
       </div>
 
       {recentlyDeleted.length > 0 && (
-        <div className="fixed bottom-4 right-4 w-72 bg-white border border-gray-200 rounded-xl shadow-lg px-4 pt-4 pb-5">
-          <h2 className="text-xs font-semibold text-gray-400 uppercase tracking-wide mb-3">
-            Recently Deleted
-          </h2>
+        <div className="fixed bottom-4 right-4 w-72 glass rounded-xl px-4 pt-4 pb-5">
+          <h2 className="text-xs font-semibold text-white/40 uppercase tracking-wide mb-3">Recently Deleted</h2>
           {recentlyDeleted.map((task) => (
-            <div
-              key={task.id}
-              className="flex items-center justify-between bg-gray-50 border border-gray-200 rounded-lg px-4 py-3 mb-2"
-            >
+            <div key={task.id} className="flex items-center justify-between bg-white/5 border border-white/10 rounded-lg px-4 py-3 mb-2">
               <div className="min-w-0">
-                <p className="text-sm text-gray-400 truncate">{task.title}</p>
-                {task.description && (
-                  <p className="text-xs text-gray-300 truncate">{task.description}</p>
-                )}
+                <p className="text-sm text-white/50 truncate">{task.title}</p>
+                {task.description && <p className="text-xs text-white/30 truncate">{task.description}</p>}
               </div>
-              <button
-                onClick={() => handleRestore(task)}
-                className="text-xs text-gray-500 border border-gray-300 bg-white rounded px-2 py-1 ml-3 shrink-0 hover:bg-gray-200 transition-colors duration-150"
-              >
-                Restore
-              </button>
+              <Button variant="secondary" onClick={() => handleRestore(task)} className="text-xs px-2 py-1 ml-3 shrink-0">Restore</Button>
             </div>
           ))}
         </div>

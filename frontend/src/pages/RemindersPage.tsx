@@ -136,16 +136,19 @@ function CreateCard({ onRefresh }: { onRefresh: () => Promise<void> }) {
 
   if (!open) {
     return (
-      <div onClick={() => setOpen(true)} className="cursor-pointer">
-        <Card className="mb-6 hover:bg-white/15 transition-colors">
-          <p className="text-sm text-white/40 text-center">+ New reminder</p>
-        </Card>
+      <div className="mb-6">
+        <button
+          onClick={() => setOpen(true)}
+          className="text-xs text-white/40 hover:text-white/70 bg-white/5 hover:bg-white/10 border border-white/10 px-3 py-1.5 rounded-lg transition-colors duration-150"
+        >
+          + New reminder
+        </button>
       </div>
     );
   }
 
   return (
-    <Card className="mb-6">
+    <Card className="mb-6 max-w-sm">
       <p className="text-xs font-semibold text-white/50 uppercase tracking-wide mb-3">New Reminder</p>
       {error && <p className="text-red-300 text-sm mb-3">{error}</p>}
       <label className="block mb-2">
@@ -216,6 +219,12 @@ export default function RemindersPage() {
     }, 30000);
     return () => clearInterval(interval);
   }, []);
+
+  async function handleClearCompleted() {
+    const completedReminders = reminders.filter((r) => r.status === "COMPLETED" && r.repeatFrequency === "NONE");
+    await Promise.all(completedReminders.map((r) => apiFetch(`/api/v1/reminders/${r.id}`, { method: "DELETE" })));
+    await fetchReminders();
+  }
 
   function handleDeleted(reminder: Reminder) {
     setRecentlyDeleted((prev) => [reminder, ...prev].slice(0, 5));
@@ -288,12 +297,15 @@ export default function RemindersPage() {
 
         {showCompleted && completed.length > 0 && (
           <div className="mt-8">
-            <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wide mb-3">Completed</h2>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wide">Completed</h2>
+              <button onClick={handleClearCompleted} className="text-xs text-white/30 hover:text-white/60 transition-colors duration-150">Clear all</button>
+            </div>
             <div className="grid grid-cols-1 md:grid-cols-3 gap-2">
               {completed.map((r) => (
                 <Card key={r.id} className="opacity-60">
-                  <div className="flex items-center gap-2">
-                    <span className="text-emerald-400 text-sm">✓</span>
+                  <div className="flex items-center gap-3">
+                    <span className="w-4 h-4 rounded bg-emerald-400/30 border border-emerald-400/50 shrink-0 flex items-center justify-center text-emerald-400 text-[10px]">✓</span>
                     <p className="text-white/50 text-sm truncate line-through">{r.title}</p>
                     <span className="text-[10px] bg-white/10 text-white/30 px-1.5 py-0.5 rounded shrink-0 ml-auto">
                       {REPEAT_LABELS[r.repeatFrequency]}

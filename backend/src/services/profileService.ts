@@ -1,4 +1,5 @@
 import { prisma } from "../lib/prisma";
+import { hashPassword, verifyPassword } from "../lib/password";
 
 const profileSelect = {
   id: true,
@@ -23,7 +24,7 @@ export async function getProfile(userId: string) {
 
 export async function updateProfile(
   userId: string,
-  fields: { displayName?: string; profilePicture?: string; dailyGoal?: number }
+  fields: { displayName?: string; profilePicture?: string; dailyGoal?: number; email?: string }
 ) {
   const user = await prisma.user.findUnique({ where: { id: userId } });
   if (!user) throw new Error("NOT_FOUND");
@@ -32,4 +33,19 @@ export async function updateProfile(
     data: fields,
     select: profileSelect,
   });
+}
+
+export async function changePassword(
+  userId: string,
+  currentPassword: string,
+  newPassword: string
+) {
+  const user = await prisma.user.findUnique({ where: { id: userId } });
+  if (!user) throw new Error("NOT_FOUND");
+
+  const valid = await verifyPassword(currentPassword, user.passwordHash);
+  if (!valid) throw new Error("INVALID_PASSWORD");
+
+  const passwordHash = await hashPassword(newPassword);
+  await prisma.user.update({ where: { id: userId }, data: { passwordHash } });
 }

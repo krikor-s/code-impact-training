@@ -11,9 +11,9 @@ function handleSignOut() {
 
 const NAV_ITEMS = [
   { href: "/", label: "Dashboard" },
+  { href: "/calendar", label: "Calendar" },
   { href: "/tasks", label: "Tasks" },
   { href: "/reminders", label: "Reminders" },
-  { href: "/calendar", label: "Calendar" },
   { href: "/profile", label: "Profile" },
 ];
 

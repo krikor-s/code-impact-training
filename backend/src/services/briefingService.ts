@@ -1,12 +1,11 @@
 import Anthropic from "@anthropic-ai/sdk";
 import { prisma } from "../lib/prisma";
-import { getWeather } from "./weatherService";
+import { getWeatherFromEnv } from "./weatherService";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
 export async function generateBriefing(
   userId: string,
-  coords?: { lat: number; lon: number },
   timeContext?: { localTime?: string; timezone?: string }
 ): Promise<string> {
   const now = new Date();
@@ -27,7 +26,7 @@ export async function generateBriefing(
       where: { userId, status: "UPCOMING", scheduledAt: { lte: weekEnd, gte: now } },
       orderBy: { scheduledAt: "asc" },
     }),
-    coords ? getWeather(coords.lat, coords.lon) : Promise.resolve(null),
+    getWeatherFromEnv(),
   ]);
 
   const tz = timeContext?.timezone;

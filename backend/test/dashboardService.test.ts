@@ -3,7 +3,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 const mockEventFindMany = vi.hoisted(() => vi.fn());
 const mockTaskFindMany = vi.hoisted(() => vi.fn());
 const mockReminderFindMany = vi.hoisted(() => vi.fn());
-const mockGetWeather = vi.hoisted(() => vi.fn());
+const mockGetWeatherFromEnv = vi.hoisted(() => vi.fn());
 
 vi.mock("../src/lib/prisma", () => ({
   prisma: {
@@ -14,7 +14,7 @@ vi.mock("../src/lib/prisma", () => ({
 }));
 
 vi.mock("../src/services/weatherService", () => ({
-  getWeather: mockGetWeather,
+  getWeatherFromEnv: mockGetWeatherFromEnv,
 }));
 
 import { getDashboardSummary } from "../src/services/dashboardService";
@@ -22,9 +22,12 @@ import { getDashboardSummary } from "../src/services/dashboardService";
 const userId = "user-1";
 
 describe("getDashboardSummary", () => {
-  beforeEach(() => vi.clearAllMocks());
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockGetWeatherFromEnv.mockResolvedValue(null);
+  });
 
-  it("returns events, tasks, reminders, and weather as null when no coords provided", async () => {
+  it("returns events, tasks, reminders, and weather as null when WEATHER_LOCATION is unset", async () => {
     const fakeEvents = [{ id: "evt-1", title: "Standup" }];
     const fakeTasks = [{ id: "task-1", title: "Fix bug" }];
     const fakeReminders = [{ id: "rem-1", title: "Call dentist" }];
@@ -41,20 +44,19 @@ describe("getDashboardSummary", () => {
       reminders: fakeReminders,
       weather: null,
     });
-    expect(mockGetWeather).not.toHaveBeenCalled();
   });
 
-  it("fetches weather when coords are provided", async () => {
+  it("fetches weather from env var when WEATHER_LOCATION is set", async () => {
     const fakeWeather = { temperature: 72, condition: "clear sky" };
     mockEventFindMany.mockResolvedValue([]);
     mockTaskFindMany.mockResolvedValue([]);
     mockReminderFindMany.mockResolvedValue([]);
-    mockGetWeather.mockResolvedValue(fakeWeather);
+    mockGetWeatherFromEnv.mockResolvedValue(fakeWeather);
 
-    const result = await getDashboardSummary(userId, { lat: 34.05, lon: -118.25 });
+    const result = await getDashboardSummary(userId);
 
     expect(result.weather).toEqual(fakeWeather);
-    expect(mockGetWeather).toHaveBeenCalledWith(34.05, -118.25);
+    expect(mockGetWeatherFromEnv).toHaveBeenCalled();
   });
 
   it("queries events within today's UTC boundaries ordered by startAt", async () => {

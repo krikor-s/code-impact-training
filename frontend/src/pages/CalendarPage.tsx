@@ -36,8 +36,22 @@ function taskOnDay(task: Task, day: Date) {
   return task.dueDate.slice(0, 10) === dayStr;
 }
 
-function reminderOnDay(reminder: Reminder, day: Date) {
-  return isSameDay(new Date(reminder.scheduledAt), day);
+function reminderOnDay(reminder: Reminder, day: Date): boolean {
+  const scheduled = new Date(reminder.scheduledAt);
+  if (isSameDay(scheduled, day)) return true;
+  if (reminder.repeatFrequency === "NONE" || reminder.status !== "UPCOMING") return false;
+
+  const dayStart = new Date(day); dayStart.setHours(0, 0, 0, 0);
+  const schedStart = new Date(scheduled); schedStart.setHours(0, 0, 0, 0);
+  if (dayStart <= schedStart) return false;
+
+  if (reminder.repeatFrequency === "DAILY") return true;
+
+  const diffDays = Math.round((dayStart.getTime() - schedStart.getTime()) / 86400000);
+  if (reminder.repeatFrequency === "WEEKLY") return diffDays % 7 === 0;
+  if (reminder.repeatFrequency === "MONTHLY") return scheduled.getDate() === day.getDate();
+
+  return false;
 }
 
 function eventOnDay(event: Event, day: Date) {
@@ -108,9 +122,9 @@ function CreateFormModal({
     setError(null);
     if (type === "event") {
       if (new Date(startAt) >= new Date(endAt)) { setError("End must be after start"); return; }
-      await onSaveEvent({ title, description: description || undefined, startAt, endAt });
+      await onSaveEvent({ title, description: description || undefined, startAt: new Date(startAt).toISOString(), endAt: new Date(endAt).toISOString() });
     } else if (type === "reminder") {
-      await onSaveReminder({ title, scheduledAt, repeatFrequency });
+      await onSaveReminder({ title, scheduledAt: new Date(scheduledAt).toISOString(), repeatFrequency });
     } else {
       await onSaveTask({ title, description: description || undefined, dueDate });
     }
@@ -220,7 +234,7 @@ function EventFormModal({
       setError("End must be after start");
       return;
     }
-    await onSave({ title, description: description || undefined, startAt, endAt });
+    await onSave({ title, description: description || undefined, startAt: new Date(startAt).toISOString(), endAt: new Date(endAt).toISOString() });
   }
 
   return (
@@ -275,12 +289,12 @@ function ReminderFormModal({
   onClose: () => void;
 }) {
   const [title, setTitle] = useState(reminder.title);
-  const [scheduledAt, setScheduledAt] = useState(reminder.scheduledAt.slice(0, 16));
+  const [scheduledAt, setScheduledAt] = useState(toLocalInput(new Date(reminder.scheduledAt)));
   const [repeatFrequency, setRepeatFrequency] = useState<RepeatFrequency>(reminder.repeatFrequency);
 
   async function handleSubmit(e: React.SyntheticEvent<HTMLFormElement>) {
     e.preventDefault();
-    await onSave({ title, scheduledAt, repeatFrequency });
+    await onSave({ title, scheduledAt: new Date(scheduledAt).toISOString(), repeatFrequency });
   }
 
   return (
@@ -357,7 +371,7 @@ function TaskEditModal({
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-white/50">Due date</span>
-            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={inputClass} />
+            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/40" />
           </label>
           <div className="flex gap-2 mt-1">
             <Button type="submit" className="flex-1 py-2">Save</Button>
@@ -390,102 +404,106 @@ function TimeGrid({
   const today = new Date(); today.setHours(0, 0, 0, 0);
 
   return (
-    <div className="flex flex-col flex-1 border border-white/15 rounded-xl overflow-hidden">
-      <div className="flex border-b border-white/15 bg-white/5">
-        <div className="w-12 shrink-0" />
-        {days.map((day, i) => {
-          const isToday = isSameDay(day, today);
-          return (
-            <div key={i} className="flex-1 text-center py-2 border-l border-white/10">
-              <p className="text-xs font-semibold text-white/50 uppercase tracking-wide">{DAY_NAMES[day.getDay()]}</p>
-              <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-sm font-medium mt-0.5 ${isToday ? "bg-white/20 text-white" : "text-white/70"}`}>
-                {day.getDate()}
-              </span>
-            </div>
-          );
-        })}
-      </div>
+    <div className="flex flex-col flex-1 min-h-0 border border-white/15 rounded-xl overflow-hidden">
+      <div ref={scrollRef} className="flex-1 overflow-y-auto min-h-0">
+        <div className="sticky top-0 z-20 bg-[#0a1e38]">
+          <div className="flex border-b border-white/15 bg-white/5">
+            <div className="w-12 shrink-0" />
+            {days.map((day, i) => {
+              const isToday = isSameDay(day, today);
+              return (
+                <div key={i} className="flex-1 text-center py-2 border-l border-white/10">
+                  <p className="text-xs font-semibold text-white/50 uppercase tracking-wide">{DAY_NAMES[day.getDay()]}</p>
+                  <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-sm font-medium mt-0.5 ${isToday ? "bg-white/20 text-white" : "text-white/70"}`}>
+                    {day.getDate()}
+                  </span>
+                </div>
+              );
+            })}
+          </div>
 
-      <div className="flex border-b border-white/15 bg-white/5">
-        <div className="w-12 shrink-0 flex items-center justify-end pr-2 py-1">
-          <span className="text-xs text-white/30">all-day</span>
-        </div>
-        {days.map((day, i) => {
-          const dayTasks = tasks.filter((t) => taskOnDay(t, day));
-          return (
-            <div key={i} className="flex-1 border-l border-white/10 py-0.5 px-1 min-h-5">
-              {dayTasks.map((task) => (
-                <div key={task.id} data-event onClick={() => onTaskClick(task)} className="text-xs bg-amber-500/80 text-white rounded px-1 py-0.5 truncate mb-0.5 cursor-pointer hover:bg-amber-400/80 transition-colors duration-150">{task.title}</div>
-              ))}
+          <div className="flex border-b border-white/15 bg-white/5">
+            <div className="w-12 shrink-0 flex items-center justify-end pr-2 py-1">
+              <span className="text-xs text-white/30">all-day</span>
             </div>
-          );
-        })}
-      </div>
-
-      <div ref={scrollRef} className="flex overflow-y-auto" style={{ maxHeight: 600 }}>
-        <div className="w-12 shrink-0 relative" style={{ height: 24 * HOUR_HEIGHT }}>
-          {Array.from({ length: 24 }, (_, h) => (
-            <div key={h} className="absolute right-2 text-xs text-white/30" style={{ top: h * HOUR_HEIGHT - 8 }}>
-              {h === 0 ? "" : `${h}:00`}
-            </div>
-          ))}
+            {days.map((day, i) => {
+              const dayTasks = tasks.filter((t) => taskOnDay(t, day));
+              return (
+                <div key={i} className="flex-1 border-l border-white/10 py-0.5 px-1 min-h-5">
+                  {dayTasks.map((task) => (
+                    <div key={task.id} data-event onClick={() => onTaskClick(task)} className="text-xs bg-amber-500/80 text-white rounded px-1 py-0.5 truncate mb-0.5 cursor-pointer hover:bg-amber-400/80 transition-colors duration-150">{task.title}</div>
+                  ))}
+                </div>
+              );
+            })}
+          </div>
         </div>
 
-        {days.map((day, di) => {
-          const dayEvents = events.filter((e) => eventOnDay(e, day));
-          const layout = layoutDayEvents(dayEvents);
-          const dayReminders = reminders.filter((r) => reminderOnDay(r, day));
-          return (
-            <div
-              key={di}
-              className="flex-1 relative border-l border-white/10"
-              style={{ height: 24 * HOUR_HEIGHT }}
-              onClick={(e) => {
-                if ((e.target as HTMLElement).closest("[data-event]")) return;
-                const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
-                const y = e.clientY - rect.top;
-                const hour = Math.floor(y / HOUR_HEIGHT);
-                const minutes = Math.round(((y % HOUR_HEIGHT) / HOUR_HEIGHT) * 60 / 15) * 15;
-                const d = new Date(day); d.setHours(hour, minutes, 0, 0);
-                onSlotClick(d);
-              }}
-            >
-              {Array.from({ length: 24 }, (_, h) => (
-                <div key={h} className="absolute w-full border-t border-white/5 pointer-events-none" style={{ top: h * HOUR_HEIGHT }} />
-              ))}
-              {dayReminders.map((reminder) => {
-                const scheduled = new Date(reminder.scheduledAt);
-                const top = (scheduled.getHours() + scheduled.getMinutes() / 60) * HOUR_HEIGHT;
-                return (
-                  <div key={reminder.id} data-event className="absolute z-10 rounded px-1.5 py-0.5 bg-violet-500/80 text-white text-xs overflow-hidden cursor-pointer hover:bg-violet-400/80 transition-colors duration-150" style={{ top, height: 22, left: 0, right: 0 }} onClick={() => onReminderClick(reminder)}>
-                    <p className="font-medium truncate leading-tight">{reminder.title}</p>
-                  </div>
-                );
-              })}
-              {dayEvents.map((event) => {
-                const start = new Date(event.startAt);
-                const end = new Date(event.endAt);
-                const top = (start.getHours() + start.getMinutes() / 60) * HOUR_HEIGHT;
-                const height = Math.max(20, ((end.getTime() - start.getTime()) / 3600000) * HOUR_HEIGHT);
-                const pos = layout.get(event.id) ?? { col: 0, cols: 1 };
-                const width = 100 / pos.cols;
-                const left = pos.col * width;
-                return (
-                  <div
-                    key={event.id}
-                    data-event
-                    onClick={() => onEventClick(event)}
-                    className="absolute z-10 rounded px-1.5 py-0.5 bg-cyan-500/80 text-white text-xs overflow-hidden cursor-pointer hover:bg-cyan-400/80 transition-colors duration-150"
-                    style={{ top, height, left: `${left}%`, width: `${width}%` }}
-                  >
-                    <p className="font-medium truncate leading-tight">{event.title}</p>
-                    <p className="text-white/50 truncate leading-tight">{start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
-                  </div>
-                );
-              })}
-            </div>
-          );
-        })}
+        <div className="flex">
+          <div className="w-12 shrink-0 relative" style={{ height: 24 * HOUR_HEIGHT }}>
+            {Array.from({ length: 24 }, (_, h) => (
+              <div key={h} className="absolute right-2 text-xs text-white/30" style={{ top: h * HOUR_HEIGHT, transform: "translateY(-50%)" }}>
+                {h === 0 ? "" : `${h}:00`}
+              </div>
+            ))}
+          </div>
+
+          {days.map((day, di) => {
+            const dayEvents = events.filter((e) => eventOnDay(e, day));
+            const layout = layoutDayEvents(dayEvents);
+            const dayReminders = reminders.filter((r) => reminderOnDay(r, day));
+            return (
+              <div
+                key={di}
+                className="flex-1 relative border-l border-white/10"
+                style={{ height: 24 * HOUR_HEIGHT }}
+                onClick={(e) => {
+                  if ((e.target as HTMLElement).closest("[data-event]")) return;
+                  const rect = (e.currentTarget as HTMLDivElement).getBoundingClientRect();
+                  const y = e.clientY - rect.top;
+                  const hour = Math.floor(y / HOUR_HEIGHT);
+                  const minutes = Math.round(((y % HOUR_HEIGHT) / HOUR_HEIGHT) * 60 / 15) * 15;
+                  const d = new Date(day); d.setHours(hour, minutes, 0, 0);
+                  onSlotClick(d);
+                }}
+              >
+                {Array.from({ length: 24 }, (_, h) => (
+                  <div key={h} className="absolute w-full border-t border-white/5 pointer-events-none" style={{ top: h * HOUR_HEIGHT }} />
+                ))}
+                {dayReminders.map((reminder) => {
+                  const scheduled = new Date(reminder.scheduledAt);
+                  const top = (scheduled.getHours() + scheduled.getMinutes() / 60) * HOUR_HEIGHT;
+                  return (
+                    <div key={reminder.id} data-event className="absolute z-10 rounded px-1.5 py-0.5 bg-violet-500/80 text-white text-xs overflow-hidden cursor-pointer hover:bg-violet-400/80 transition-colors duration-150" style={{ top, height: 22, left: 0, right: 0 }} onClick={() => onReminderClick(reminder)}>
+                      <p className="font-medium truncate leading-tight">{reminder.title}</p>
+                    </div>
+                  );
+                })}
+                {dayEvents.map((event) => {
+                  const start = new Date(event.startAt);
+                  const end = new Date(event.endAt);
+                  const top = (start.getHours() + start.getMinutes() / 60) * HOUR_HEIGHT;
+                  const height = Math.max(20, ((end.getTime() - start.getTime()) / 3600000) * HOUR_HEIGHT);
+                  const pos = layout.get(event.id) ?? { col: 0, cols: 1 };
+                  const width = 100 / pos.cols;
+                  const left = pos.col * width;
+                  return (
+                    <div
+                      key={event.id}
+                      data-event
+                      onClick={() => onEventClick(event)}
+                      className="absolute z-10 rounded px-1.5 py-0.5 bg-cyan-500/80 text-white text-xs overflow-hidden cursor-pointer hover:bg-cyan-400/80 transition-colors duration-150"
+                      style={{ top, height, left: `${left}%`, width: `${width}%` }}
+                    >
+                      <p className="font-medium truncate leading-tight">{event.title}</p>
+                      <p className="text-white/50 truncate leading-tight">{start.toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" })}</p>
+                    </div>
+                  );
+                })}
+              </div>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
@@ -507,7 +525,7 @@ function MonthView({
   while (cells.length < 42) { cells.push(new Date(d)); d.setDate(d.getDate() + 1); }
 
   return (
-    <div className="flex-1">
+    <div className="flex-1 min-h-0 overflow-y-auto">
       <div className="grid grid-cols-7 border-l border-t border-white/15 rounded-xl overflow-hidden">
         {DAY_NAMES.map((name) => (
           <div key={name} className="border-r border-b border-white/15 py-2 text-center text-xs font-semibold text-white/50 uppercase tracking-wide bg-white/5">
@@ -682,7 +700,8 @@ export default function CalendarPage() {
   }
 
   return (
-    <Layout>
+    <Layout fillHeight>
+      <div className="flex flex-col h-full min-h-0">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-white">Calendar</h1>
         <div className="flex border border-white/20 rounded-lg overflow-hidden text-sm">
@@ -722,10 +741,12 @@ export default function CalendarPage() {
         <TimeGrid days={getWeekDays()} events={events} tasks={tasks} reminders={reminders} onSlotClick={openCreate} onEventClick={(event) => setModal({ mode: "edit", event })} onReminderClick={setReminderModal} onTaskClick={setTaskModal} />
       )}
       {view === "day" && (
-        <div className="max-w-xl">
+        <div className="max-w-xl flex-1 min-h-0 flex flex-col">
           <TimeGrid days={[cursor]} events={events} tasks={tasks} reminders={reminders} onSlotClick={openCreate} onEventClick={(event) => setModal({ mode: "edit", event })} onReminderClick={setReminderModal} onTaskClick={setTaskModal} />
         </div>
       )}
+
+      </div>
 
       {modal && (
         <EventFormModal

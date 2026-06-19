@@ -5,6 +5,11 @@ import Layout from "../components/Layout";
 import Card from "../components/Card";
 import Button from "../components/Button";
 
+function toLocalInput(d: Date) {
+  const pad = (n: number) => n.toString().padStart(2, "0");
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(d.getHours())}:${pad(d.getMinutes())}`;
+}
+
 const REPEAT_LABELS: Record<RepeatFrequency, string> = {
   NONE: "One-time",
   DAILY: "Daily",
@@ -25,7 +30,7 @@ function ReminderCard({
 }) {
   const [open, setOpen] = useState(false);
   const [editTitle, setEditTitle] = useState(reminder.title);
-  const [editScheduledAt, setEditScheduledAt] = useState(reminder.scheduledAt.slice(0, 16));
+  const [editScheduledAt, setEditScheduledAt] = useState(toLocalInput(new Date(reminder.scheduledAt)));
   const [editRepeat, setEditRepeat] = useState<RepeatFrequency>(reminder.repeatFrequency);
 
   async function handleComplete() {
@@ -41,14 +46,14 @@ function ReminderCard({
   async function handleSave() {
     const res = await apiFetch(`/api/v1/reminders/${reminder.id}`, {
       method: "PATCH",
-      body: JSON.stringify({ title: editTitle, scheduledAt: editScheduledAt, repeatFrequency: editRepeat }),
+      body: JSON.stringify({ title: editTitle, scheduledAt: new Date(editScheduledAt).toISOString(), repeatFrequency: editRepeat }),
     });
     if (res.ok) { setOpen(false); await onRefresh(); }
   }
 
   function handleOpen() {
     setEditTitle(reminder.title);
-    setEditScheduledAt(reminder.scheduledAt.slice(0, 16));
+    setEditScheduledAt(toLocalInput(new Date(reminder.scheduledAt)));
     setEditRepeat(reminder.repeatFrequency);
     setOpen(true);
   }
@@ -120,7 +125,7 @@ function CreateCard({ onRefresh }: { onRefresh: () => Promise<void> }) {
     if (!title || !scheduledAt) { setError("Title and time are required"); return; }
     const res = await apiFetch("/api/v1/reminders", {
       method: "POST",
-      body: JSON.stringify({ title, scheduledAt, repeatFrequency }),
+      body: JSON.stringify({ title, scheduledAt: new Date(scheduledAt).toISOString(), repeatFrequency }),
     });
     if (!res.ok) {
       const data = (await res.json()) as { error?: string };

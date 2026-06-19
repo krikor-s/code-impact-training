@@ -1,4 +1,4 @@
-import { useState, useEffect, useRef } from "react";
+import { useState, useEffect } from "react";
 import type { Task, Reminder, Event } from "../types";
 import { apiFetch } from "../lib/api";
 import Layout from "../components/Layout";
@@ -43,16 +43,6 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
-function getLocation(): Promise<{ lat: number; lon: number } | null> {
-  return new Promise((resolve) => {
-    if (!navigator.geolocation) { resolve(null); return; }
-    navigator.geolocation.getCurrentPosition(
-      (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
-      () => resolve(null),
-      { timeout: 5000 },
-    );
-  });
-}
 
 function ExpandableTask({
   task,
@@ -187,8 +177,6 @@ export default function DashboardPage() {
     }
     return false;
   });
-  const coordsRef = useRef<{ lat: number; lon: number } | null>(null);
-
   useEffect(() => {
     if (!showWelcome) return;
     const timer = setTimeout(() => setShowWelcome(false), 3000);
@@ -197,19 +185,20 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function load() {
-      const coords = await getLocation();
-      coordsRef.current = coords;
-      const params = coords ? `?lat=${coords.lat}&lon=${coords.lon}` : "";
-      const [dashRes, taskRes, remRes] = await Promise.all([
-        apiFetch(`/api/v1/dashboard${params}`),
+      const [dashRes, eventsRes, taskRes, remRes] = await Promise.all([
+        apiFetch("/api/v1/dashboard"),
+        apiFetch("/api/v1/events"),
         apiFetch("/api/v1/tasks"),
         apiFetch("/api/v1/reminders"),
       ]);
       if (dashRes.ok) {
-        const d = (await dashRes.json()) as { data: { events: Event[]; weather: Weather | null; streak: Streak } };
-        setEvents(d.data.events);
+        const d = (await dashRes.json()) as { data: { weather: Weather | null; streak: Streak } };
         setWeather(d.data.weather);
         setStreak(d.data.streak);
+      }
+      if (eventsRes.ok) {
+        const d = (await eventsRes.json()) as { data: Event[] };
+        setEvents(d.data);
       }
       if (taskRes.ok) {
         const d = (await taskRes.json()) as { data: Task[] };
@@ -278,11 +267,10 @@ export default function DashboardPage() {
 
   async function handleGetBriefing() {
     setBriefing({ status: "loading" });
-    const payload: Record<string, unknown> = {
+    const payload = {
       localTime: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true }),
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
     };
-    if (coordsRef.current) { payload.lat = coordsRef.current.lat; payload.lon = coordsRef.current.lon; }
     const res = await apiFetch("/api/v1/dashboard/briefing", { method: "POST", body: JSON.stringify(payload) });
     if (!res.ok) {
       const data = (await res.json()) as { error?: string };

@@ -17,14 +17,14 @@ const NAV_ITEMS = [
   { href: "/profile", label: "Profile" },
 ];
 
-export default function Layout({ children }: { children: ReactNode }) {
+export default function Layout({ children, fillHeight = false }: { children: ReactNode; fillHeight?: boolean }) {
   const displayName = localStorage.getItem("displayName");
   const profilePicture = localStorage.getItem("profilePicture");
   const pictureUrl = profilePicture ? `${BASE_URL}${profilePicture}` : null;
   const path = window.location.pathname;
 
   return (
-    <div className="min-h-screen bg-ocean flex">
+    <div className="h-screen bg-ocean flex overflow-hidden">
       <nav className="w-52 shrink-0 glass flex flex-col p-4 m-4 mr-0 rounded-xl">
         <a href="/" className="text-2xl font-bold text-white mb-6 px-2 tracking-tight">Orbit</a>
         <div className="flex flex-col gap-1">
@@ -74,7 +74,7 @@ export default function Layout({ children }: { children: ReactNode }) {
           </button>
         </div>
       </nav>
-      <div className="flex-1 flex flex-col p-8">
+      <div className={`flex-1 flex flex-col p-8 min-h-0 ${fillHeight ? "overflow-hidden" : "overflow-y-auto"}`}>
         {children}
       </div>
     </div>

@@ -332,34 +332,34 @@ export default function ProfilePage() {
           </form>
         </Card>
 
-        <Card className="w-48">
-          <p className="text-[10px] font-semibold text-white/40 uppercase tracking-wide mb-2">Streak</p>
-          <div className="flex gap-4 mb-3">
+        <Card className="w-56">
+          <p className="text-xs font-semibold text-white/40 uppercase tracking-wide mb-4">Streak</p>
+          <div className="flex gap-6 mb-5">
             <div>
-              <p className="text-lg font-bold text-white">{profile.currentStreak}</p>
-              <p className="text-[10px] text-white/40">Current</p>
+              <p className="text-4xl font-bold text-white leading-none">{profile.currentStreak}</p>
+              <p className="text-xs text-white/40 mt-1">Current</p>
             </div>
             <div>
-              <p className="text-lg font-bold text-white">{profile.longestStreak}</p>
-              <p className="text-[10px] text-white/40">Longest</p>
+              <p className="text-4xl font-bold text-white leading-none">{profile.longestStreak}</p>
+              <p className="text-xs text-white/40 mt-1">Longest</p>
             </div>
           </div>
-          <div className="border-t border-white/10 pt-2">
-            <div className="flex flex-col gap-1.5">
+          <div className="border-t border-white/10 pt-3">
+            <div className="flex flex-col gap-2.5">
               {[
                 { icon: "🐚", name: "Shell", milestone: 3 },
                 { icon: "🦪", name: "Pearl", milestone: 7 },
                 { icon: "🌊", name: "Wave", milestone: 14 },
                 { icon: "⚓", name: "Anchor", milestone: 30 },
               ].map((b) => (
-                <div key={b.name} className="flex items-center gap-1.5">
-                  <span className={`text-xs ${profile.longestStreak >= b.milestone ? "" : "opacity-30"}`}>{b.icon}</span>
-                  <span className={`text-[10px] ${profile.longestStreak >= b.milestone ? "text-white/60" : "text-white/25"}`}>{b.name}</span>
-                  {profile.longestStreak < b.milestone && <span className="text-[10px] text-white/20 ml-auto">{b.milestone}d</span>}
+                <div key={b.name} className="flex items-center gap-2">
+                  <span className={`text-base ${profile.longestStreak >= b.milestone ? "" : "opacity-30"}`}>{b.icon}</span>
+                  <span className={`text-sm ${profile.longestStreak >= b.milestone ? "text-white/70" : "text-white/30"}`}>{b.name}</span>
+                  {profile.longestStreak < b.milestone && <span className="text-xs text-white/30 ml-auto">{b.milestone}d</span>}
                 </div>
               ))}
             </div>
-            <p className="text-[9px] text-white/20 mt-2">Keep your streak alive to collect these.</p>
+            <p className="text-xs text-white/25 mt-3">Keep your streak alive to collect these.</p>
           </div>
         </Card>
         </div>

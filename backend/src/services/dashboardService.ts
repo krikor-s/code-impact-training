@@ -1,7 +1,7 @@
 import { prisma } from "../lib/prisma";
-import { getWeather } from "./weatherService";
+import { getWeatherFromEnv } from "./weatherService";
 
-export async function getDashboardSummary(userId: string, coords?: { lat: number; lon: number }) {
+export async function getDashboardSummary(userId: string) {
   const now = new Date();
   const todayStart = new Date(now);
   todayStart.setHours(0, 0, 0, 0);
@@ -19,7 +19,7 @@ export async function getDashboardSummary(userId: string, coords?: { lat: number
     prisma.reminder.findMany({
       where: { userId, status: "UPCOMING", scheduledAt: { gte: todayStart, lte: todayEnd } },
     }),
-    coords ? getWeather(coords.lat, coords.lon) : Promise.resolve(null),
+    getWeatherFromEnv(),
   ]);
 
   return { events, tasks, reminders, weather };

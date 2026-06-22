@@ -88,10 +88,12 @@ export default function DatePicker({
                   type="button"
                   onClick={() => select(day)}
                   className={`text-xs py-1 rounded transition-colors duration-100 ${
-                    isSelected
-                      ? "bg-white/25 text-white font-medium"
+                    isSelected && isToday
+                      ? "bg-white/30 text-white font-medium ring-1 ring-emerald-400/60"
+                      : isSelected
+                      ? "bg-white/30 text-white font-medium"
                       : isToday
-                      ? "text-emerald-400 hover:bg-white/10"
+                      ? "text-emerald-300 ring-1 ring-emerald-400/40 hover:bg-white/10"
                       : "text-white/70 hover:bg-white/10"
                   }`}
                 >

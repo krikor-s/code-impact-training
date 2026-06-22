@@ -3,6 +3,7 @@ import type { FormEvent } from "react";
 import type { Task } from "../types";
 import { apiFetch } from "../lib/api";
 import Layout from "../components/Layout";
+import DatePicker from "../components/DatePicker";
 import Card from "../components/Card";
 import Button from "../components/Button";
 
@@ -92,17 +93,12 @@ function TaskCard({
               className="mt-1 block w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white resize-none focus:outline-none focus:border-white/40"
             />
           </label>
-          <label className="block mb-3">
+          <div className="block mb-3">
             <span className="text-xs font-medium text-white/50">
               Due date <span className="text-white/30">(optional)</span>
             </span>
-            <input
-              type="date"
-              value={editDueDate}
-              onChange={(e) => setEditDueDate(e.target.value)}
-              className="mt-1 block w-full bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/40"
-            />
-          </label>
+            <DatePicker value={editDueDate} onChange={setEditDueDate} className="mt-1" />
+          </div>
           <div className="flex gap-2">
             <Button type="submit" className="flex-1 py-1.5">Save</Button>
             <Button variant="secondary" type="button" onClick={() => setEditing(false)} className="flex-1 py-1.5">Cancel</Button>
@@ -256,10 +252,10 @@ export default function TasksPage() {
                 <span className="text-xs text-white/50">Description <span className="text-white/30">(optional)</span></span>
                 <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} className={inputClass} />
               </label>
-              <label className="block mb-3">
+              <div className="block mb-3">
                 <span className="text-xs text-white/50">Due date <span className="text-white/30">(optional)</span></span>
-                <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className={inputClass} />
-              </label>
+                <DatePicker value={dueDate} onChange={setDueDate} className="mt-1" />
+              </div>
               <div className="flex gap-2">
                 <Button type="submit" className="text-xs px-3 py-1.5">Save</Button>
                 <Button variant="secondary" type="button" onClick={() => setShowForm(false)} className="text-xs px-3 py-1.5">Cancel</Button>

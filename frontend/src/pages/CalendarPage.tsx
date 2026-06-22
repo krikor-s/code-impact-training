@@ -416,7 +416,7 @@ function TimeGrid({
               return (
                 <div key={i} className="flex-1 text-center py-2 border-l border-white/10">
                   <p className="text-xs font-semibold text-white/50 uppercase tracking-wide">{DAY_NAMES[day.getDay()]}</p>
-                  <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-sm font-medium mt-0.5 ${isToday ? "bg-white/20 text-white" : "text-white/70"}`}>
+                  <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-sm font-medium mt-0.5 ${isToday ? "bg-emerald-500/30 text-emerald-300 ring-1 ring-emerald-400/50" : "text-white/70"}`}>
                     {day.getDate()}
                   </span>
                 </div>
@@ -429,7 +429,7 @@ function TimeGrid({
               <span className="text-xs text-white/30">all-day</span>
             </div>
             {days.map((day, i) => {
-              const dayTasks = tasks.filter((t) => taskOnDay(t, day));
+              const dayTasks = tasks.filter((t) => t.status === "UPCOMING" && taskOnDay(t, day));
               return (
                 <div key={i} className="flex-1 border-l border-white/10 py-0.5 px-1 min-h-5">
                   {dayTasks.map((task) => (
@@ -538,7 +538,7 @@ function MonthView({
           const isToday = isSameDay(cell, today);
           const isCurrentMonth = cell.getMonth() === month;
           const dayEvents = events.filter((e) => eventOnDay(e, cell));
-          const dayTasks = tasks.filter((t) => taskOnDay(t, cell));
+          const dayTasks = tasks.filter((t) => t.status === "UPCOMING" && taskOnDay(t, cell));
           const dayReminders = reminders.filter((r) => reminderOnDay(r, cell));
           const allItems = [
             ...dayEvents.map((e) => ({ type: "event" as const, id: e.id, title: e.title, event: e, reminder: undefined as Reminder | undefined, task: undefined as Task | undefined })),
@@ -551,7 +551,7 @@ function MonthView({
               onClick={(e) => { if (!(e.target as HTMLElement).closest("[data-event]")) onDayClick(cell); }}
               className={`border-r border-b border-white/15 min-h-22.5 p-2 cursor-pointer hover:bg-white/5 transition-colors duration-150 ${isCurrentMonth ? "bg-transparent" : "bg-white/2"}`}
             >
-              <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-sm font-medium ${isToday ? "bg-white/20 text-white" : isCurrentMonth ? "text-white/70" : "text-white/20"}`}>
+              <span className={`inline-flex items-center justify-center w-7 h-7 rounded-full text-sm font-medium ${isToday ? "bg-emerald-500/30 text-emerald-300 ring-1 ring-emerald-400/50" : isCurrentMonth ? "text-white/70" : "text-white/20"}`}>
                 {cell.getDate()}
               </span>
               <div className="mt-1 flex flex-col gap-0.5">
@@ -743,7 +743,7 @@ export default function CalendarPage() {
         <TimeGrid days={getWeekDays()} events={events} tasks={tasks} reminders={reminders} onSlotClick={openCreate} onEventClick={(event) => setModal({ mode: "edit", event })} onReminderClick={setReminderModal} onTaskClick={setTaskModal} />
       )}
       {view === "day" && (
-        <div className="max-w-xl flex-1 min-h-0 flex flex-col">
+        <div className="w-full max-w-2xl flex-1 min-h-0 flex flex-col">
           <TimeGrid days={[cursor]} events={events} tasks={tasks} reminders={reminders} onSlotClick={openCreate} onEventClick={(event) => setModal({ mode: "edit", event })} onReminderClick={setReminderModal} onTaskClick={setTaskModal} />
         </div>
       )}

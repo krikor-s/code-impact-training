@@ -1,9 +1,11 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { Task, Reminder, Event } from "../types";
 import { apiFetch } from "../lib/api";
 import Layout from "../components/Layout";
 import Card from "../components/Card";
 import Button from "../components/Button";
+import DatePicker from "../components/DatePicker";
+import DateTimePicker from "../components/DateTimePicker";
 
 type Weather = { temperature: number; condition: string };
 type Badge = { name: string; tier: string; milestone: number };
@@ -23,12 +25,16 @@ const WIDGET_LABELS: Record<WidgetType, string> = {
   profile: "Profile",
 };
 const ALL_WIDGETS: WidgetType[] = ["weather", "completion", "streak", "date", "profile"];
-const DEFAULT_WIDGETS: WidgetType[] = ["weather", "completion", "streak"];
+const DEFAULT_WIDGETS: WidgetType[] = ["weather", "completion", "streak", "date"];
 
 function loadWidgets(): WidgetType[] {
   const saved = localStorage.getItem("dashboardWidgets");
   if (saved) {
-    try { return JSON.parse(saved) as WidgetType[]; } catch { /* fall through */ }
+    try {
+      const parsed = JSON.parse(saved) as WidgetType[];
+      while (parsed.length < 4) parsed.push(DEFAULT_WIDGETS[parsed.length] ?? "date");
+      return parsed.slice(0, 4);
+    } catch { /* fall through */ }
   }
   return DEFAULT_WIDGETS;
 }
@@ -168,8 +174,30 @@ export default function DashboardPage() {
   const [streak, setStreak] = useState<Streak | null>(null);
   const [loading, setLoading] = useState(true);
   const [briefing, setBriefing] = useState<BriefingState>({ status: "idle" });
+  const [briefingVisible, setBriefingVisible] = useState(false);
+  const briefingDataHash = useRef("");
   const [widgets, setWidgets] = useState<WidgetType[]>(loadWidgets);
   const [editingSlot, setEditingSlot] = useState<number | null>(null);
+  const [creating, setCreating] = useState<"task" | "reminder" | "event" | null>(null);
+  const [newTitle, setNewTitle] = useState("");
+  const [newDescription, setNewDescription] = useState("");
+  const [newDueDate, setNewDueDate] = useState("");
+  const [newScheduledAt, setNewScheduledAt] = useState("");
+  const [newStartAt, setNewStartAt] = useState("");
+  const [newEndAt, setNewEndAt] = useState("");
+  const widgetGridRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    if (editingSlot === null) return;
+    function handleClick(e: MouseEvent) {
+      if (widgetGridRef.current && !widgetGridRef.current.contains(e.target as Node)) {
+        setEditingSlot(null);
+      }
+    }
+    document.addEventListener("mousedown", handleClick);
+    return () => document.removeEventListener("mousedown", handleClick);
+  }, [editingSlot]);
+
   const [showWelcome, setShowWelcome] = useState(() => {
     if (localStorage.getItem("showWelcome") === "true") {
       localStorage.removeItem("showWelcome");
@@ -265,7 +293,53 @@ export default function DashboardPage() {
     }
   }
 
+  function resetCreateForm() {
+    setNewTitle(""); setNewDescription(""); setNewDueDate(""); setNewScheduledAt(""); setNewStartAt(""); setNewEndAt("");
+  }
+
+  function openCreate(type: "task" | "reminder" | "event") {
+    const pad = (n: number) => n.toString().padStart(2, "0");
+    const now = new Date();
+    const todayStr = `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
+    const hourLater = new Date(now); hourLater.setHours(hourLater.getHours() + 1, 0, 0, 0);
+    resetCreateForm();
+    setNewDueDate(todayStr);
+    setNewScheduledAt(`${todayStr}T${pad(hourLater.getHours())}:00`);
+    setNewStartAt(`${todayStr}T${pad(now.getHours())}:00`);
+    setNewEndAt(`${todayStr}T${pad(hourLater.getHours())}:00`);
+    setCreating(creating === type ? null : type);
+  }
+
+  async function handleQuickCreate() {
+    if (!newTitle.trim() || !creating) return;
+    if (creating === "task") {
+      await apiFetch("/api/v1/tasks", { method: "POST", body: JSON.stringify({ title: newTitle, description: newDescription || undefined, dueDate: newDueDate || undefined }) });
+      const res = await apiFetch("/api/v1/tasks");
+      if (res.ok) { const d = (await res.json()) as { data: Task[] }; setTasks(d.data); }
+    } else if (creating === "reminder") {
+      await apiFetch("/api/v1/reminders", { method: "POST", body: JSON.stringify({ title: newTitle, scheduledAt: newScheduledAt }) });
+      const res = await apiFetch("/api/v1/reminders");
+      if (res.ok) { const d = (await res.json()) as { data: Reminder[] }; setReminders(d.data); }
+    } else if (creating === "event") {
+      await apiFetch("/api/v1/events", { method: "POST", body: JSON.stringify({ title: newTitle, startAt: new Date(newStartAt).toISOString(), endAt: new Date(newEndAt).toISOString() }) });
+      const res = await apiFetch("/api/v1/events");
+      if (res.ok) { const d = (await res.json()) as { data: Event[] }; setEvents(d.data); }
+    }
+    resetCreateForm();
+    setCreating(null);
+  }
+
+  function getDataHash() {
+    return JSON.stringify({ t: tasks.map((t) => t.id + t.status), r: reminders.map((r) => r.id + r.status), e: events.map((e) => e.id) });
+  }
+
   async function handleGetBriefing() {
+    const currentHash = getDataHash();
+    if (briefing.status === "done" && briefingDataHash.current === currentHash) {
+      setBriefingVisible(true);
+      return;
+    }
+    setBriefingVisible(true);
     setBriefing({ status: "loading" });
     const payload = {
       localTime: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true }),
@@ -279,6 +353,7 @@ export default function DashboardPage() {
     }
     const data = (await res.json()) as { data: { briefing: string } };
     setBriefing({ status: "done", text: data.data.briefing });
+    briefingDataHash.current = currentHash;
   }
 
   function swapWidget(slot: number, newType: WidgetType) {
@@ -305,39 +380,39 @@ export default function DashboardPage() {
 
   return (
     <Layout>
-      <div className="max-w-4xl mx-auto">
+      <div className="w-full max-w-5xl mx-auto">
         <div className="mb-8 flex items-start justify-between gap-4">
           <div>
             <h1 className="text-3xl font-bold text-white">Hey, {displayName}</h1>
             {!widgets.includes("date") && <p className="text-white/50 mt-1">{todayLabel}</p>}
           </div>
           <Button
-            onClick={() => {
-              if (briefing.status === "done" || briefing.status === "error") {
-                setBriefing({ status: "idle" });
-              } else {
-                void handleGetBriefing();
-              }
-            }}
+            onClick={() => void handleGetBriefing()}
             disabled={briefing.status === "loading"}
           >
-            {briefing.status === "loading" ? "Getting briefing…" : briefing.status === "done" || briefing.status === "error" ? "Hide Briefing" : "Get AI Briefing"}
+            {briefing.status === "loading" ? "Getting briefing…" : "Get AI Briefing"}
           </Button>
         </div>
 
-        {briefing.status === "done" && (
-          <Card className="mb-8">
-            <p className="text-xs font-semibold text-white/40 uppercase tracking-wide mb-2">AI Briefing</p>
-            <p className="text-sm text-white/80 leading-relaxed">{briefing.text}</p>
-          </Card>
-        )}
-        {briefing.status === "error" && (
-          <Card className="mb-8">
-            <p className="text-sm text-red-300">{briefing.message}</p>
-          </Card>
+        {briefingVisible && (briefing.status === "done" || briefing.status === "error" || briefing.status === "loading") && (
+          <div className="fixed top-6 right-6 z-40 w-96 glass-strong rounded-2xl px-6 py-5 shadow-2xl animate-fade-in">
+            <div className="flex items-center justify-between mb-2">
+              <p className="text-xs font-semibold text-white/40 uppercase tracking-wide">AI Briefing</p>
+              <button onClick={() => setBriefingVisible(false)} className="text-white/30 hover:text-white text-xs">✕</button>
+            </div>
+            {briefing.status === "loading" && (
+              <p className="text-sm text-white/40">Loading…</p>
+            )}
+            {briefing.status === "done" && (
+              <p className="text-sm text-white/80 leading-relaxed">{briefing.text}</p>
+            )}
+            {briefing.status === "error" && (
+              <p className="text-sm text-red-300">{briefing.message}</p>
+            )}
+          </div>
         )}
 
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
+        <div ref={widgetGridRef} className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-8 relative z-10">
           {widgets.map((widget, i) => (
             <Card key={`${widget}-${i}`} className="relative flex flex-col items-center justify-center py-6 group">
               <button
@@ -348,7 +423,7 @@ export default function DashboardPage() {
                 ···
               </button>
               {editingSlot === i && (
-                <div className="absolute top-8 right-2 z-20 rounded-lg py-1 min-w-28 bg-[#0a1e38]/95 border border-white/20 shadow-xl backdrop-blur-sm">
+                <div className="absolute top-8 right-2 z-50 rounded-lg py-1 min-w-28 bg-[#0a1e38]/95 border border-white/20 shadow-xl backdrop-blur-sm">
                   {ALL_WIDGETS.map((w) => (
                     <button
                       key={w}
@@ -433,73 +508,141 @@ export default function DashboardPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Tasks tile */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wide">Tasks</h2>
-                <a href="/tasks" className="text-xs text-white/30 hover:text-white/60">View tasks</a>
+            <div className="glass-light rounded-xl px-5 py-4 min-h-48">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wide">
+                  Tasks{dueTasks.length > 0 && <span className="ml-1.5 text-white/30">({dueTasks.length})</span>}
+                </h2>
+                <div className="flex items-center gap-2">
+                  <a href="/tasks" className="text-xs text-white/30 hover:text-white/60">View tasks</a>
+                  <button onClick={() => openCreate("task")} className="w-5 h-5 rounded bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/40 hover:text-white text-xs transition-colors">+</button>
+                </div>
               </div>
-              {dueTasks.length === 0 ? (
+              {creating === "task" && (
+                <div className="mb-3 flex flex-col gap-2">
+                  <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Title" autoFocus className="bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/40" />
+                  <input type="text" value={newDescription} onChange={(e) => setNewDescription(e.target.value)} placeholder="Description (optional)" className="bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/40" />
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] text-white/40">Due date (optional)</span>
+                    <DatePicker value={newDueDate} onChange={setNewDueDate} />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={() => void handleQuickCreate()} className="text-xs px-3 py-1.5">Add</Button>
+                    <Button variant="secondary" onClick={() => setCreating(null)} className="text-xs px-3 py-1.5">Cancel</Button>
+                  </div>
+                </div>
+              )}
+              {dueTasks.length === 0 && creating !== "task" ? (
                 <p className="text-xs text-white/30 italic">No tasks due today</p>
               ) : (
                 <div className="flex flex-col gap-2">
-                  {dueTasks.map((t) => (
+                  {dueTasks.slice(0, 3).map((t) => (
                     <ExpandableTask key={t.id} task={t} onComplete={handleCompleteTask} onUpdate={handleUpdateTask} />
                   ))}
+                  {dueTasks.length > 3 && (
+                    <a href="/tasks" className="text-xs text-white/30 hover:text-white/50 text-center pt-1">+{dueTasks.length - 3} more</a>
+                  )}
                 </div>
               )}
             </div>
 
             {/* Reminders tile */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wide">Reminders</h2>
-                <a href="/reminders" className="text-xs text-white/30 hover:text-white/60">View reminders</a>
+            <div className="glass-light rounded-xl px-5 py-4 min-h-48">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wide">
+                  Reminders{todayReminders.length > 0 && <span className="ml-1.5 text-white/30">({todayReminders.length})</span>}
+                </h2>
+                <div className="flex items-center gap-2">
+                  <a href="/reminders" className="text-xs text-white/30 hover:text-white/60">View reminders</a>
+                  <button onClick={() => openCreate("reminder")} className="w-5 h-5 rounded bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/40 hover:text-white text-xs transition-colors">+</button>
+                </div>
               </div>
-              {todayReminders.length === 0 ? (
+              {creating === "reminder" && (
+                <div className="mb-3 flex flex-col gap-2">
+                  <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Title" autoFocus className="bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/40" />
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] text-white/40">Scheduled at</span>
+                    <DateTimePicker value={newScheduledAt} onChange={setNewScheduledAt} />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={() => void handleQuickCreate()} className="text-xs px-3 py-1.5">Add</Button>
+                    <Button variant="secondary" onClick={() => setCreating(null)} className="text-xs px-3 py-1.5">Cancel</Button>
+                  </div>
+                </div>
+              )}
+              {todayReminders.length === 0 && creating !== "reminder" ? (
                 <p className="text-xs text-white/30 italic">No reminders today</p>
               ) : (
                 <div className="flex flex-col gap-2">
-                  {todayReminders.map((r) => (
+                  {todayReminders.slice(0, 3).map((r) => (
                     <ExpandableReminder key={r.id} reminder={r} onComplete={handleCompleteReminder} onUpdate={handleUpdateReminder} />
                   ))}
+                  {todayReminders.length > 3 && (
+                    <a href="/reminders" className="text-xs text-white/30 hover:text-white/50 text-center pt-1">+{todayReminders.length - 3} more</a>
+                  )}
                 </div>
               )}
             </div>
 
             {/* Events tile */}
-            <div>
-              <div className="flex items-center justify-between mb-3">
-                <h2 className="text-xs font-semibold text-white/50 uppercase tracking-wide">Today&apos;s Events</h2>
-                <a href="/calendar" className="text-xs text-white/30 hover:text-white/60">View calendar</a>
+            <div className="glass-light rounded-xl px-5 py-4 min-h-48">
+              <div className="flex items-center justify-between mb-4">
+                <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wide">
+                  Events{todayEvents.length > 0 && <span className="ml-1.5 text-white/30">({todayEvents.length})</span>}
+                </h2>
+                <div className="flex items-center gap-2">
+                  <a href="/calendar" className="text-xs text-white/30 hover:text-white/60">View calendar</a>
+                  <button onClick={() => openCreate("event")} className="w-5 h-5 rounded bg-white/10 hover:bg-white/20 flex items-center justify-center text-white/40 hover:text-white text-xs transition-colors">+</button>
+                </div>
               </div>
-              {todayEvents.length === 0 ? (
+              {creating === "event" && (
+                <div className="mb-3 flex flex-col gap-2">
+                  <input type="text" value={newTitle} onChange={(e) => setNewTitle(e.target.value)} placeholder="Title" autoFocus className="bg-white/10 border border-white/20 rounded-lg px-3 py-1.5 text-sm text-white placeholder-white/30 focus:outline-none focus:border-white/40" />
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] text-white/40">Start</span>
+                    <DateTimePicker value={newStartAt} onChange={setNewStartAt} />
+                  </div>
+                  <div className="flex flex-col gap-1">
+                    <span className="text-[10px] text-white/40">End</span>
+                    <DateTimePicker value={newEndAt} onChange={setNewEndAt} />
+                  </div>
+                  <div className="flex gap-2">
+                    <Button onClick={() => void handleQuickCreate()} className="text-xs px-3 py-1.5">Add</Button>
+                    <Button variant="secondary" onClick={() => setCreating(null)} className="text-xs px-3 py-1.5">Cancel</Button>
+                  </div>
+                </div>
+              )}
+              {todayEvents.length === 0 && creating !== "event" ? (
                 <p className="text-xs text-white/30 italic">No events today</p>
               ) : (
                 <div className="flex flex-col gap-2">
-                  {todayEvents.map((e) => (
-                    <Card key={e.id}>
+                  {todayEvents.slice(0, 3).map((e) => (
+                    <div key={e.id} className="bg-white/5 rounded-lg px-3 py-2">
                       <p className="text-white font-medium text-sm">{e.title}</p>
                       <p className="text-xs text-white/40 mt-0.5">
                         {formatTime(e.startAt)} – {formatTime(e.endAt)}
                       </p>
                       {e.description && <p className="text-xs text-white/50 mt-0.5">{e.description}</p>}
-                    </Card>
+                    </div>
                   ))}
+                  {todayEvents.length > 3 && (
+                    <a href="/calendar" className="text-xs text-white/30 hover:text-white/50 text-center pt-1">+{todayEvents.length - 3} more</a>
+                  )}
                 </div>
               )}
             </div>
 
             {/* Profile tile */}
             <a href="/profile" className="block">
-              <Card className="flex items-center gap-4 hover:bg-white/15 transition-colors cursor-pointer">
-                <div className="w-10 h-10 rounded-full bg-white/15 flex items-center justify-center text-white font-bold">
+              <div className="glass-light rounded-xl px-5 py-4 min-h-48 flex items-center justify-center gap-5 hover:bg-white/10 transition-colors cursor-pointer">
+                <div className="w-14 h-14 rounded-full bg-white/15 flex items-center justify-center text-white text-xl font-bold">
                   {displayName.charAt(0).toUpperCase()}
                 </div>
                 <div>
-                  <p className="text-white font-medium text-sm">{displayName}</p>
+                  <p className="text-white font-medium text-lg">{displayName}</p>
                   <p className="text-xs text-white/40">View profile</p>
                 </div>
-              </Card>
+              </div>
             </a>
           </div>
         )}

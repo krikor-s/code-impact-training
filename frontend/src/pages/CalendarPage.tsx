@@ -1,6 +1,8 @@
 import React, { useState, useEffect, useRef } from "react";
 import Layout from "../components/Layout";
 import Button from "../components/Button";
+import DatePicker from "../components/DatePicker";
+import DateTimePicker from "../components/DateTimePicker";
 import { apiFetch } from "../lib/api";
 import type { Event, Task, Reminder, RepeatFrequency } from "../types";
 
@@ -159,22 +161,22 @@ function CreateFormModal({
           )}
           {type === "event" && (
             <>
-              <label className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1">
                 <span className="text-xs font-medium text-white/50">Start</span>
-                <input type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} required className={inputClass} />
-              </label>
-              <label className="flex flex-col gap-1">
+                <DateTimePicker value={startAt} onChange={setStartAt} />
+              </div>
+              <div className="flex flex-col gap-1">
                 <span className="text-xs font-medium text-white/50">End</span>
-                <input type="datetime-local" value={endAt} onChange={(e) => setEndAt(e.target.value)} required className={inputClass} />
-              </label>
+                <DateTimePicker value={endAt} onChange={setEndAt} />
+              </div>
             </>
           )}
           {type === "reminder" && (
             <>
-              <label className="flex flex-col gap-1">
+              <div className="flex flex-col gap-1">
                 <span className="text-xs font-medium text-white/50">Scheduled at</span>
-                <input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} required className={inputClass} />
-              </label>
+                <DateTimePicker value={scheduledAt} onChange={setScheduledAt} />
+              </div>
               <label className="flex flex-col gap-1">
                 <span className="text-xs font-medium text-white/50">Repeat</span>
                 <select value={repeatFrequency} onChange={(e) => setRepeatFrequency(e.target.value as RepeatFrequency)} className={inputClass}>
@@ -187,10 +189,10 @@ function CreateFormModal({
             </>
           )}
           {type === "task" && (
-            <label className="flex flex-col gap-1">
+            <div className="flex flex-col gap-1">
               <span className="text-xs font-medium text-white/50">Due date</span>
-              <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} required className={inputClass} />
-            </label>
+              <DatePicker value={dueDate} onChange={setDueDate} />
+            </div>
           )}
           <div className="flex gap-2 mt-1">
             <Button type="submit" className="flex-1 py-2">Create</Button>
@@ -254,14 +256,14 @@ function EventFormModal({
             <span className="text-xs font-medium text-white/50">Description</span>
             <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/40" />
           </label>
-          <label className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1">
             <span className="text-xs font-medium text-white/50">Start</span>
-            <input type="datetime-local" value={startAt} onChange={(e) => setStartAt(e.target.value)} required className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/40" />
-          </label>
-          <label className="flex flex-col gap-1">
+            <DateTimePicker value={startAt} onChange={setStartAt} />
+          </div>
+          <div className="flex flex-col gap-1">
             <span className="text-xs font-medium text-white/50">End</span>
-            <input type="datetime-local" value={endAt} onChange={(e) => setEndAt(e.target.value)} required className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/40" />
-          </label>
+            <DateTimePicker value={endAt} onChange={setEndAt} />
+          </div>
           <div className="flex gap-2 mt-1">
             <Button type="submit" className="flex-1 py-2">{mode === "create" ? "Create" : "Save"}</Button>
             <Button variant="secondary" type="button" onClick={onClose} className="flex-1 py-2">Cancel</Button>
@@ -307,10 +309,10 @@ function ReminderFormModal({
             <span className="text-xs font-medium text-white/50">Title</span>
             <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} required autoFocus className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/40" />
           </label>
-          <label className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1">
             <span className="text-xs font-medium text-white/50">Scheduled at</span>
-            <input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} required className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/40" />
-          </label>
+            <DateTimePicker value={scheduledAt} onChange={setScheduledAt} />
+          </div>
           <label className="flex flex-col gap-1">
             <span className="text-xs font-medium text-white/50">Repeat</span>
             <select value={repeatFrequency} onChange={(e) => setRepeatFrequency(e.target.value as RepeatFrequency)} className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/40">
@@ -369,10 +371,10 @@ function TaskEditModal({
             <span className="text-xs font-medium text-white/50">Description <span className="text-white/30">(optional)</span></span>
             <input type="text" value={description} onChange={(e) => setDescription(e.target.value)} className={inputClass} />
           </label>
-          <label className="flex flex-col gap-1">
+          <div className="flex flex-col gap-1">
             <span className="text-xs font-medium text-white/50">Due date</span>
-            <input type="date" value={dueDate} onChange={(e) => setDueDate(e.target.value)} className="bg-white/10 border border-white/20 rounded-lg px-3 py-2 text-sm text-white focus:outline-none focus:border-white/40" />
-          </label>
+            <DatePicker value={dueDate} onChange={setDueDate} />
+          </div>
           <div className="flex gap-2 mt-1">
             <Button type="submit" className="flex-1 py-2">Save</Button>
             <Button variant="secondary" type="button" onClick={onClose} className="flex-1 py-2">Cancel</Button>

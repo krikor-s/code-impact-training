@@ -4,6 +4,7 @@ import { apiFetch } from "../lib/api";
 import Layout from "../components/Layout";
 import Card from "../components/Card";
 import Button from "../components/Button";
+import DateTimePicker from "../components/DateTimePicker";
 
 function toLocalInput(d: Date) {
   const pad = (n: number) => n.toString().padStart(2, "0");
@@ -89,10 +90,10 @@ function ReminderCard({
             <span className="text-xs text-white/50">Title</span>
             <input type="text" value={editTitle} onChange={(e) => setEditTitle(e.target.value)} className={inputClass} />
           </label>
-          <label className="block mb-2">
+          <div className="block mb-2">
             <span className="text-xs text-white/50">Scheduled at</span>
-            <input type="datetime-local" value={editScheduledAt} onChange={(e) => setEditScheduledAt(e.target.value)} className={inputClass} />
-          </label>
+            <DateTimePicker value={editScheduledAt} onChange={setEditScheduledAt} className="mt-1" />
+          </div>
           <label className="block mb-3">
             <span className="text-xs text-white/50">Repeat</span>
             <select value={editRepeat} onChange={(e) => setEditRepeat(e.target.value as RepeatFrequency)} className={inputClass}>
@@ -160,10 +161,10 @@ function CreateCard({ onRefresh }: { onRefresh: () => Promise<void> }) {
         <span className="text-xs text-white/50">Title</span>
         <input type="text" value={title} onChange={(e) => setTitle(e.target.value)} autoFocus className={inputClass} />
       </label>
-      <label className="block mb-2">
+      <div className="block mb-2">
         <span className="text-xs text-white/50">Scheduled at</span>
-        <input type="datetime-local" value={scheduledAt} onChange={(e) => setScheduledAt(e.target.value)} className={inputClass} />
-      </label>
+        <DateTimePicker value={scheduledAt} onChange={setScheduledAt} className="mt-1" />
+      </div>
       <label className="block mb-3">
         <span className="text-xs text-white/50">Repeat</span>
         <select value={repeatFrequency} onChange={(e) => setRepeatFrequency(e.target.value as RepeatFrequency)} className={inputClass}>

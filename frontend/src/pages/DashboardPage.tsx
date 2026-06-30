@@ -49,6 +49,17 @@ function formatTime(iso: string) {
   return new Date(iso).toLocaleTimeString([], { hour: "2-digit", minute: "2-digit" });
 }
 
+function getCoords(): Promise<{ lat: number; lon: number } | null> {
+  return new Promise((resolve) => {
+    if (!navigator.geolocation) { resolve(null); return; }
+    navigator.geolocation.getCurrentPosition(
+      (pos) => resolve({ lat: pos.coords.latitude, lon: pos.coords.longitude }),
+      () => resolve(null),
+      { timeout: 5000 }
+    );
+  });
+}
+
 
 function ExpandableTask({
   task,
@@ -186,6 +197,7 @@ export default function DashboardPage() {
   const [newStartAt, setNewStartAt] = useState("");
   const [newEndAt, setNewEndAt] = useState("");
   const widgetGridRef = useRef<HTMLDivElement>(null);
+  const coordsRef = useRef<{ lat: number; lon: number } | null>(null);
 
   useEffect(() => {
     if (editingSlot === null) return;
@@ -213,8 +225,11 @@ export default function DashboardPage() {
 
   useEffect(() => {
     async function load() {
+      const coords = await getCoords();
+      coordsRef.current = coords;
+      const dashPath = coords ? `/api/v1/dashboard?lat=${coords.lat}&lon=${coords.lon}` : "/api/v1/dashboard";
       const [dashRes, eventsRes, taskRes, remRes] = await Promise.all([
-        apiFetch("/api/v1/dashboard"),
+        apiFetch(dashPath),
         apiFetch("/api/v1/events"),
         apiFetch("/api/v1/tasks"),
         apiFetch("/api/v1/reminders"),
@@ -341,9 +356,11 @@ export default function DashboardPage() {
     }
     setBriefingVisible(true);
     setBriefing({ status: "loading" });
+    const coords = coordsRef.current;
     const payload = {
       localTime: new Date().toLocaleTimeString([], { hour: "2-digit", minute: "2-digit", hour12: true }),
       timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+      ...(coords ? { lat: coords.lat, lon: coords.lon } : {}),
     };
     const res = await apiFetch("/api/v1/dashboard/briefing", { method: "POST", body: JSON.stringify(payload) });
     if (!res.ok) {
@@ -508,7 +525,7 @@ export default function DashboardPage() {
         ) : (
           <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
             {/* Tasks tile */}
-            <div className="glass-light rounded-xl px-5 py-4 min-h-48">
+            <div className={`glass-light rounded-xl px-5 py-4 min-h-48 ${creating === "task" ? "z-20" : ""}`}>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wide">
                   Tasks{dueTasks.length > 0 && <span className="ml-1.5 text-white/30">({dueTasks.length})</span>}
@@ -547,7 +564,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Reminders tile */}
-            <div className="glass-light rounded-xl px-5 py-4 min-h-48">
+            <div className={`glass-light rounded-xl px-5 py-4 min-h-48 ${creating === "reminder" ? "z-20" : ""}`}>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wide">
                   Reminders{todayReminders.length > 0 && <span className="ml-1.5 text-white/30">({todayReminders.length})</span>}
@@ -585,7 +602,7 @@ export default function DashboardPage() {
             </div>
 
             {/* Events tile */}
-            <div className="glass-light rounded-xl px-5 py-4 min-h-48">
+            <div className={`glass-light rounded-xl px-5 py-4 min-h-48 ${creating === "event" ? "z-20" : ""}`}>
               <div className="flex items-center justify-between mb-4">
                 <h2 className="text-sm font-semibold text-white/60 uppercase tracking-wide">
                   Events{todayEvents.length > 0 && <span className="ml-1.5 text-white/30">({todayEvents.length})</span>}

@@ -70,7 +70,7 @@ function TimeSelect({
               key={opt}
               type="button"
               onClick={() => { onChange(opt); setOpen(false); }}
-              className={`block w-full text-left text-xs px-3 py-1 transition-colors duration-100 ${
+              className={`block w-full text-left text-xs px-3 py-1 transition-none ${
                 value === opt ? "bg-white/20 text-white font-medium" : "text-white/70 hover:bg-white/10"
               }`}
             >

@@ -6,11 +6,13 @@ export async function getBriefingController(req: Request, res: Response) {
     return res.status(503).json({ success: false, error: "AI briefing is not configured" });
   }
 
-  const { localTime, timezone } = req.body as {
+  const { localTime, timezone, lat, lon } = req.body as {
     localTime?: string;
     timezone?: string;
+    lat?: number;
+    lon?: number;
   };
 
-  const briefing = await generateBriefing(req.userId!, { localTime, timezone });
+  const briefing = await generateBriefing(req.userId!, { localTime, timezone }, lat, lon);
   res.json({ success: true, data: { briefing } });
 }

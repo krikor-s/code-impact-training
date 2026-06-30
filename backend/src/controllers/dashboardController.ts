@@ -4,7 +4,13 @@ import { evaluateStreak, getEarnedBadges, getNextBadge } from "../services/strea
 import { getProfile } from "../services/profileService";
 
 export async function getDashboardController(req: Request, res: Response) {
-  const data = await getDashboardSummary(req.userId!);
+  const lat = req.query.lat !== undefined ? parseFloat(req.query.lat as string) : undefined;
+  const lon = req.query.lon !== undefined ? parseFloat(req.query.lon as string) : undefined;
+  const data = await getDashboardSummary(
+    req.userId!,
+    lat !== undefined && !isNaN(lat) ? lat : undefined,
+    lon !== undefined && !isNaN(lon) ? lon : undefined
+  );
 
   const totalItems = data.tasks.length + data.reminders.length;
   const completed = data.tasks.filter((t) => t.status === "COMPLETED").length

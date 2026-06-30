@@ -30,16 +30,6 @@ const WMO_DESCRIPTIONS: Record<number, string> = {
   99: "thunderstorm with heavy hail",
 };
 
-export function getWeatherFromEnv(): Promise<Weather | null> {
-  const loc = process.env.WEATHER_LOCATION;
-  if (!loc) return Promise.resolve(null);
-  const [latStr, lonStr] = loc.split(",");
-  const lat = parseFloat(latStr);
-  const lon = parseFloat(lonStr);
-  if (isNaN(lat) || isNaN(lon)) return Promise.resolve(null);
-  return getWeather(lat, lon);
-}
-
 export async function getWeather(lat: number, lon: number): Promise<Weather | null> {
   const url = `https://api.open-meteo.com/v1/forecast?latitude=${lat}&longitude=${lon}&current=temperature_2m,weather_code&temperature_unit=fahrenheit`;
   const res = await fetch(url);

@@ -87,7 +87,7 @@ export default function DatePicker({
                   key={day}
                   type="button"
                   onClick={() => select(day)}
-                  className={`text-xs py-1 rounded transition-colors duration-100 ${
+                  className={`text-xs py-1 rounded transition-none ${
                     isSelected && isToday
                       ? "bg-white/30 text-white font-medium ring-1 ring-emerald-400/60"
                       : isSelected
